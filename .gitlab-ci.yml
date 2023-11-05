@@ -1,0 +1,109 @@
+stages:
+  - lint
+  - test
+  - tag
+  - release
+
+lint code:
+  stage: lint
+  image: registry.yusufali.ca/containers/python:latest
+  before_script:
+    - apt-get update
+    - apt-get install -y git
+    - pip install isort black flake8
+  variables:
+    PROJECT_FOLDER: servc
+  script:
+    - isort $PROJECT_FOLDER
+    - black $PROJECT_FOLDER
+    - flake8 --ignore=E501,W503 $PROJECT_FOLDER
+    - git status
+    - git diff --exit-code $PROJECT_FOLDER
+
+lint merge commit:
+  stage: lint
+  image: registry.yusufali.ca/containers/node:lts-slim
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+  before_script:
+    - npm install -g @commitlint/cli @commitlint/config-conventional
+  script:
+    - commitlint --from=$CI_MERGE_REQUEST_TARGET_BRANCH_NAME --verbose
+
+lint commit:
+  stage: lint
+  image: registry.yusufali.ca/containers/node:lts-slim
+  before_script:
+    - npm install -g @commitlint/cli @commitlint/config-conventional
+  script:
+    - commitlint --from=HEAD~2 --verbose
+
+# unit tests:
+#   stage: test
+#   image: registry.yusufali.ca/containers/python:latest
+#   before_script:
+#     - pip install coverage
+#     - pip install --no-cache-dir -r requirements.txt
+#     - sleep 1m
+#   services:
+#     - name: registry.yusufali.ca/containers/postgres:latest
+#       alias: postgres
+#       variables:
+#         POSTGRES_PASSWORD: postgres
+#     - name: registry.yusufali.ca/containers/redis:latest
+#       alias: redis
+#     - name: registry.yusufali.ca/containers/rabbitmq:latest
+#       alias: rabbitmq
+#   variables:
+#     CACHE_URL: redis://redis:6379
+#     DB_URL: postgresql://postgres:postgres@postgres:5432/postgres
+#     BUS_URL: amqp://rabbitmq
+#   script:
+#     - coverage run -m unittest tests/*.py
+#     - coverage report -m --fail-under ${COVERAGE:-80}
+
+test build package:
+  stage: test
+  image: registry.yusufali.ca/containers/python:latest
+  before_script:
+    - pip install --no-cache-dir -r requirements.txt
+    - pip install build
+  script:
+    - python -m build --sdist --wheel --outdir dist/ .
+
+# test autotag:
+#   stage: test
+#   image: registry.yusufali.ca/containers/python:latest
+#   before_script:
+#     - apt-get update && apt-get install -y --no-install-recommends git-core ca-certificates
+#     - python3 -m pip install python-semantic-release
+#     - git branch -D master
+#     - git checkout -b master
+#   script:
+#     - semantic-release --verbose --config pyproject.toml --noop version --no-vcs-release
+
+# build autotag:
+#   stage: tag
+#   image: registry.yusufali.ca/containers/python:latest
+#   rules:
+#     - if: '$CI_COMMIT_REF_PROTECTED == "true"'
+#   before_script:
+#     - apt-get update && apt-get install -y --no-install-recommends git-core ca-certificates
+#     - python3 -m pip install python-semantic-release
+#     - git branch -D master
+#     - git checkout -b master
+#   script:
+#     - semantic-release --verbose --config pyproject.toml version --no-vcs-release
+
+release:
+  stage: release
+  image: registry.yusufali.ca/containers/python:latest
+  rules:
+    - if: '$CI_COMMIT_REF_PROTECTED == "true"'
+    - if: $CI_COMMIT_TAG
+  before_script:
+    - pip install --no-cache-dir -r requirements.txt
+    - pip install build twine
+  script:
+    - python -m build --sdist --wheel --outdir dist/ .
+    - python -m twine upload --repository dist/* --non-interactive -u$PYPI_USERNAME -p$PYPI_PASSWORD
