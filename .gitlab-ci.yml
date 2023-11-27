@@ -69,41 +69,43 @@ test build package:
     - pip install --no-cache-dir -r requirements.txt
     - pip install build
   script:
-    - python -m build --sdist --wheel --outdir dist/ .
+    - python -m build
 
-# test autotag:
-#   stage: test
-#   image: registry.yusufali.ca/containers/python:latest
-#   before_script:
-#     - apt-get update && apt-get install -y --no-install-recommends git-core ca-certificates
-#     - python3 -m pip install python-semantic-release
-#     - git branch -D master
-#     - git checkout -b master
-#   script:
-#     - semantic-release --verbose --config pyproject.toml --noop version --no-vcs-release
+test autotag:
+  stage: test
+  image: registry.yusufali.ca/containers/node:current
+  before_script:
+    - apt-get update && apt-get install -y git
+    - npm install -g semantic-release @semantic-release/gitlab @semantic-release/changelog @semantic-release/git
+    - git fetch origin --tags --force
+  script:
+    - semantic-release --tag-format '${version}' --dry-run
 
-# build autotag:
-#   stage: tag
-#   image: registry.yusufali.ca/containers/python:latest
-#   rules:
-#     - if: '$CI_COMMIT_REF_PROTECTED == "true"'
-#   before_script:
-#     - apt-get update && apt-get install -y --no-install-recommends git-core ca-certificates
-#     - python3 -m pip install python-semantic-release
-#     - git branch -D master
-#     - git checkout -b master
-#   script:
-#     - semantic-release --verbose --config pyproject.toml version --no-vcs-release
+build autotag:
+  stage: tag
+  image: registry.yusufali.ca/containers/node:current
+  rules:
+    - if: '$CI_COMMIT_REF_PROTECTED == "true"'
+  before_script:
+    - apt-get update && apt-get install -y git
+    - npm install -g semantic-release @semantic-release/gitlab @semantic-release/changelog @semantic-release/git
+    - git fetch origin --tags --force
+    - git tag --delete 0.2.0
+  script:
+    - semantic-release --tag-format '${version}'
 
 release:
   stage: release
   image: registry.yusufali.ca/containers/python:latest
   rules:
     - if: '$CI_COMMIT_REF_PROTECTED == "true"'
-    - if: $CI_COMMIT_TAG
   before_script:
+    - apt-get update && apt-get install -y git
     - pip install --no-cache-dir -r requirements.txt
     - pip install build twine
+    - git fetch origin --tags --force
   script:
-    - python -m build --sdist --wheel --outdir dist/ .
-    - python -m twine upload --repository dist/* --non-interactive -u$PYPI_USERNAME -p$PYPI_PASSWORD
+    - TAG=$(git tag --points-at HEAD)
+    - sed -i "s/version = .*/version = \"$TAG\"/g" pyproject.toml
+    - python -m build
+    - python -m twine upload dist/* --non-interactive -u$PYPI_USERNAME -p$PYPI_PASSWORD
