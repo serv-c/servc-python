@@ -18,3 +18,6 @@ class CacheComponent(ServiceComponent):
 
     def getKey(self, id: str) -> Any | None:
         pass
+
+    def deleteKey(self, id: str) -> bool:
+        pass

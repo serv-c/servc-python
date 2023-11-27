@@ -53,3 +53,9 @@ class CacheRedis(CacheComponent):
         if value:
             return json.loads(value)
         return value
+
+    def deleteKey(self, id: str) -> bool:
+        if not self.isReady:
+            self.connect()
+            return self.deleteKey(id)
+        return self._redisClient.delete(id) > 0

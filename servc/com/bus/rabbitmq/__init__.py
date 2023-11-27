@@ -1,115 +1,153 @@
 from __future__ import annotations
 
+import functools
 import json
-import time
-from typing import Any, Callable, Union
+import threading
+from enum import Enum
+from typing import Any, Callable, Tuple, TypedDict
 
+import pika
 import simplejson
-from pika.exchange_type import ExchangeType
 
 from servc.com.bus import BusComponent, EmitFunction, InputProcessor, OnConsuming
-from servc.com.bus.rabbitmq.rpc import RabbitMQConsumer
 from servc.com.cache.redis import decimal_default
 from servc.io.input import InputType
 from servc.io.output import StatusCode
 
 
-def on_message(
-    self,
-    busComponent: BusComponent,
-    _unused_channel,
-    basic_deliver,
-    properties,
-    body: Any,
-    input_processor: InputProcessor,
-    emit: EmitFunction,
+class ExchangeTypes(Enum):
+    DIRECT = "direct"
+    FANOUT = "fanout"
+
+
+class DeliveryMethod(TypedDict):
+    delivery_tag: str
+
+
+PayloadHandler = Callable[
+    [
+        pika.BlockingConnection,
+        InputProcessor,
+        EmitFunction,
+        Any,
+        bytes,
+        DeliveryMethod,
+    ],
+    None,
+]
+
+
+def reply(
+    channel,
+    basic_deliver: DeliveryMethod,
+    payload: Any,
+    result: StatusCode,
+    emitFunction: EmitFunction,
+):
+    if channel and channel.is_open:
+        if result == StatusCode.NO_PROCESSING:
+            channel.basic_nack(basic_deliver.delivery_tag)
+        else:
+            channel.basic_ack(basic_deliver.delivery_tag)
+
+    if emitFunction:
+        emitFunction(payload, payload["route"] if "route" in payload else "", result)
+
+
+def payload_non_block(
+    connection: pika.BlockingConnection,
+    inputProcessor: InputProcessor,
+    emitFunction: EmitFunction,
+    channel: Any,
+    body: bytes,
+    basic_deliver: DeliveryMethod,
 ):
     payload = json.loads(body.decode("utf-8"))
-    result = input_processor(payload)
+    result = inputProcessor(payload)
 
-    if result == StatusCode.NO_PROCESSING:
-        _unused_channel.basic_nack(basic_deliver.delivery_tag)
-    else:
-        self.acknowledge_message(basic_deliver.delivery_tag)
+    callback = functools.partial(
+        reply, channel, basic_deliver, payload, result, emitFunction
+    )
+    connection.add_callback_threadsafe(callback)
 
-    if emit:
-        emit(
-            payload,
-            payload["route"] if "route" in payload else "",
-            _unused_channel,
-            self._consumer_tag,
-        )
+
+def consume_non_block(
+    arg: Tuple[
+        pika.BlockingConnection,
+        InputProcessor,
+        EmitFunction,
+    ],
+    channel: Any,
+    method: DeliveryMethod,
+    properties: Any,
+    body: Any,
+):
+    function_to_handle: PayloadHandler = payload_non_block
+    (connection, inputProcessor, emitFunction) = arg
+    thread = threading.Thread(
+        target=function_to_handle,
+        args=(connection, inputProcessor, emitFunction, channel, body, method),
+    )
+    thread.start()
 
 
 class BusRabbitMQ(BusComponent):
-    _consumer: Union[RabbitMQConsumer, None] = None
-    _reconnect_delay: int | None = None
+    _url: str
 
-    def __init__(self, url: str):
-        super().__init__(url)
-        self._init_conn()
-
-    def _init_conn(
-        self,
-        queueName: str | None = None,
-        exchangeName: str | None = "",
-        exchangeType: str | None = ExchangeType.direct,
-        onMessage: Callable | None = None,
-    ):
-        self._consumer = RabbitMQConsumer(self._url)
-        self._consumer.EXCHANGE = exchangeName
-        self._consumer.EXCHANGE_TYPE = exchangeType
-
-        if queueName:
-            self._consumer.QUEUE = queueName
-            self._consumer.ROUTING_KEY = queueName
-        if onMessage:
-            self._consumer.on_message = onMessage
-
-        self._reconnect_delay = 0
+    _conn: pika.BlockingConnection | None = None
 
     @BusComponent.isReady.getter
-    def isReady(self):
-        return (
-            self._consumer is not None
-            and self._consumer._connection is not None
-            and self._consumer._connection.is_open
-        )
+    def isReady(self) -> bool:
+        return self._conn is not None and self._conn.is_open
 
     @BusComponent.isOpen.getter
-    def isOpen(self):
-        return (
-            self._consumer is not None
-            and self._consumer._connection is not None
-            and self._consumer._connection.is_open
-        )
+    def isOpen(self) -> bool:
+        return self.isReady
 
     def _connect(self):
-        if self._consumer is not None:
-            self._consumer.connect()
+        if not self.isOpen:
+            params = pika.URLParameters(self._url)
+            self._conn = pika.BlockingConnection(params)
 
     def _close(self):
-        if self.isOpen or self.isReady:
-            self._consumer.stop()
+        if self.isOpen or self._isReady:
+            try:
+                self._channel.stop_consuming()
+                self._channel.close()
+            except Exception as e:
+                print(e)
+            try:
+                self._conn.close()
+            except Exception as e:
+                print(e)
+            self._conn = None
             return True
         return False
 
-    def publishMessage(
-        self, route: str, message: Any, emitFunction: EmitFunction
-    ) -> bool:
-        if not self.isReady:
-            self.connect()
-        if not self.isReady:
-            return False
-
-        exchangeName = (
-            ""
-            if "type" in message
-            and message["type"] in [InputType.INPUT, InputType.INPUT.value]
-            else "amqp.fanout"
+    def queue_declare(self, channel: Any, queueName: str):
+        channel.queue_declare(
+            queue=queueName, durable=True, exclusive=False, auto_delete=False
         )
 
-        channel = self._consumer._connection.channel()
+    def publishMessage(
+        self,
+        route: str,
+        message: Any,
+        emitFunction: EmitFunction = None,
+    ) -> bool:
+        if not self.isReady:
+            self._connect()
+            return self.publishMessage(route, message, emitFunction)
+
+        channel = self._conn.channel()
+        exchangeName = (
+            "amqp.fanout"
+            if "type" in message
+            and message["type"] in [InputType.EVENT.value, InputType.EVENT]
+            else ""
+        )
+
+        self.queue_declare(channel, route)
         channel.basic_publish(
             exchange=exchangeName,
             routing_key=route,
@@ -119,54 +157,28 @@ class BusRabbitMQ(BusComponent):
         channel.close()
 
         if emitFunction:
-            emitFunction(message, route)
-
-        return True
+            emitFunction(message, route, 0)
+        return super().publishMessage(route, message, emitFunction)
 
     def subscribe(
         self,
         route: str,
         inputProcessor: InputProcessor,
-        emitFunction: EmitFunction,
-        onConsuming: OnConsuming,
+        emitFunction: EmitFunction = None,
+        onConsuming: OnConsuming = None,
     ) -> bool:
-        if not self.isReady:
-            self.connect()
-        if not self.isReady:
-            return False
+        channel = self._conn.channel()
 
-        channel = self._consumer._connection.channel()
-        channel.queue_declare(
-            queue=route, durable=True, exclusive=False, auto_delete=False
+        self.queue_declare(channel, route)
+        channel.basic_qos(prefetch_count=1)
+        msg_cb = functools.partial(
+            consume_non_block, (self._conn, inputProcessor, emitFunction)
         )
-        channel.close()
-        self._init_conn(
-            queueName=route,
-            onMessage=lambda cls, channel, bd, prop, body: on_message(
-                cls, self, channel, bd, prop, body, inputProcessor, emitFunction
-            ),
-        )
-        self._consumer.run()
+        channel.basic_consume(queue=route, on_message_callback=msg_cb, auto_ack=False)
+        self._channel = channel
+        channel.start_consuming()
 
         if onConsuming:
             onConsuming(route)
 
-        return True
-
-    def _maybe_reconnect(self):
-        if self._consumer is not None and self._consumer.should_reconnect:
-            self._consumer.stop()
-            reconnect_delay = self._get_reconnect_delay()
-            time.sleep(reconnect_delay)
-            self._init_conn(
-                queueName=self._consumer.QUEUE, onMessage=self._consumer.on_message
-            )
-
-    def _get_reconnect_delay(self):
-        if self._consumer._was_consuming:
-            self._reconnect_delay = 0
-        else:
-            self._reconnect_delay += 1
-        if self._reconnect_delay > 30:
-            self._reconnect_delay = 30
-        return self._reconnect_delay
+        return super().subscribe(route, inputProcessor, emitFunction, onConsuming)

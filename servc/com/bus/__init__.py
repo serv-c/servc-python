@@ -3,7 +3,7 @@ from typing import Any, Callable, Union
 from servc.com.service import ComponentType, ServiceComponent
 from servc.io.output import StatusCode
 
-EmitFunction = Union[Callable[[Any, str], None], None]
+EmitFunction = Union[Callable[[Any, str, StatusCode | int], None], None]
 
 InputProcessor = Callable[[Any], StatusCode]
 
@@ -21,15 +21,15 @@ class BusComponent(ServiceComponent):
         self._url = url
 
     def publishMessage(
-        self, route: str, message: Any, emitFunction: EmitFunction
+        self, route: str, message: Any, emitFunction: EmitFunction = None
     ) -> bool:
-        return False
+        return True
 
     def subscribe(
         self,
         route: str,
         inputProcessor: InputProcessor,
-        emitFunction: EmitFunction,
-        onConsuming: OnConsuming,
+        emitFunction: EmitFunction = None,
+        onConsuming: OnConsuming = None,
     ) -> bool:
-        return False
+        return True

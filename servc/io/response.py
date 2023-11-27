@@ -15,7 +15,7 @@ def generateResponseArtifact(
 
     return {
         "id": id,
-        "progress": abs(progress if progress > 0 and progress < 100 else 1),
+        "progress": abs(progress if progress > 0 and progress <= 100 else 1),
         "responseBody": responseBody,
         "statusCode": statusCode.value,
         "isError": isError,

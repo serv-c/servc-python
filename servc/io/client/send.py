@@ -12,19 +12,26 @@ def sendMessage(
     message: InputPayload,
     bus: BusComponent,
     cache: CacheComponent,
-    force: bool,
     idGenerator: ID_GENERATOR,
+    force: bool = False,
     services: List[ServiceComponent] = [],
 ) -> str:
     if "inputs" not in message:
         raise Exception("InputPayload must have inputs")
 
-    id = idGenerator(
-        "-".join(["svc", message["route"]]),
-        [bus, cache, *services],
-        message["inputs"],
+    id = (
+        idGenerator(
+            "-".join(["svc", message["route"]]),
+            [bus, cache, *services],
+            message["inputs"],
+        )
+        if "id" not in message or message["id"] in ["", None]
+        else message["id"]
     )
     response = cache.getKey(id)
+
+    if force:
+        cache.deleteKey(id)
 
     if (
         response
@@ -37,14 +44,16 @@ def sendMessage(
     inputObject: InputPayload = {
         "type": InputType.INPUT.value,
         "route": message["route"],
-        "argumentId": message["argumentId"],
+        "argumentId": message["argumentId"] if "argumentId" in message else "",
         "id": id,
         "inputs": message["inputs"],
     }
 
     if "instanceId" in message and message["instanceId"]:
         inputObject["instanceId"] = message["instanceId"]
-    if message["argumentId"] not in ["plain", "raw"]:
+    if inputObject["argumentId"] not in ["plain", "raw"] and inputObject[
+        "argumentId"
+    ] in ["", None]:
         argumentId = idGenerator(
             "-".join(["arg", message["route"]]),
             [bus, cache, *services],
@@ -63,12 +72,12 @@ def sendBulkMessage(
     message: Dict[str, InputPayload],
     bus: BusComponent,
     cache: CacheComponent,
-    force: bool,
     idGenerator: ID_GENERATOR,
+    force: bool = False,
     services: List[ServiceComponent] = [],
 ) -> str:
     ids: List[str] = []
     for key, payload in message.items():
-        job_id = sendMessage(payload, bus, cache, force, idGenerator, services)
+        job_id = sendMessage(payload, bus, cache, idGenerator, force, services)
         ids.append(BULK_JOB_SEPARATOR.join([key, job_id]))
     return BULK_JOB_DELIMITER.join(ids)

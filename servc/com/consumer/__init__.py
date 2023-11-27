@@ -58,6 +58,8 @@ class ConsumerComponent(ServiceComponent):
         self._bus = bus
         self._cache = cache
 
+        self._resolvers["healthz"] = lambda *args: self.healthz(self, *args)
+
         self._children.extend(otherComponents)
         self._children.append(bus)
         self._children.append(cache)
@@ -80,6 +82,20 @@ class ConsumerComponent(ServiceComponent):
             self._emitFunction,
             self._onConsuming,
         )
+
+    def healthz(
+        self,
+        route: str,
+        bus: BusComponent,
+        cache: CacheComponent,
+        otherComponents: List[ServiceComponent],
+        inputs: Any,
+        emitEvent: EMIT_EVENT,
+    ):
+        for component in [bus, cache, *otherComponents]:
+            if not component.isReady:
+                return StatusCode.SERVER_ERROR
+        return StatusCode.OK
 
     def emitEvent(self, eventName: str, details: Any):
         bus = self._bus
@@ -168,6 +184,7 @@ class ConsumerComponent(ServiceComponent):
                     self.emitEvent,
                 )
                 cache.setKey(message["id"], getAnswerArtifact(message["id"], response))
+                return StatusCode.OK
             except Exception as e:
                 cache.setKey(
                     message["id"],
