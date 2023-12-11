@@ -1,0 +1,52 @@
+name: Lint Checks
+
+on:
+  push:
+    branches-ignore:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 3
+          fetch-tags: true
+      - uses: actions/setup-node@v3
+      - run: npm install -g @commitlint/cli @commitlint/config-conventional
+      - run: commitlint --from=HEAD~2 --verbose
+  
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 3
+          fetch-tags: true
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.12
+      - run: sudo apt-get update && sudo apt-get install -y git
+      - run: pip install isort black flake8
+      - run: |
+          isort servc
+          black servc
+          flake8 --ignore=E501,W503 servc
+      - run: |
+          git status
+          git diff --exit-code servc
+  
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 3
+          fetch-tags: true
+      - uses: actions/setup-node@v3
+      - run: npm install -g semantic-release @semantic-release/gitlab @semantic-release/changelog @semantic-release/git 
+      - run: semantic-release --tag-format '${version}' --dry-run
