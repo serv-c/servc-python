@@ -32,6 +32,9 @@ class TestServer(unittest.TestCase):
             {
                 "passthrough": inputProcessor,
             },
+            components=[
+                [CacheRedis, [cache_url]]
+            ],
             returnProcess=True,
             port=5000,
         )

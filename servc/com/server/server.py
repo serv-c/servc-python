@@ -1,5 +1,5 @@
 from multiprocessing import Process
-from typing import List
+from typing import Any, List
 
 from servc.com.bus import BusComponent, EmitFunction, OnConsuming
 from servc.com.bus.rabbitmq import BusRabbitMQ
@@ -17,6 +17,15 @@ blankEmitFunction: EmitFunction = lambda route, message, code: None
 blankOnConsuming: OnConsuming = lambda route: None
 
 
+def compose_components(
+    component_list: List[[type[ComponentType], List[Any]]]
+) -> List[ComponentType]:
+    components: List[ComponentType] = []
+    for [componentClass, args] in component_list:
+        components.append(componentClass(*args))
+    return components
+
+
 def start_consumer(
     route: str,
     resolver: RESOLVER_MAPPING,
@@ -29,7 +38,7 @@ def start_consumer(
     bus_url: str,
     emitFunction: EmitFunction,
     onConsuming: OnConsuming,
-    components: List[ComponentType],
+    components: List[[type[ComponentType], List[Any]]],
 ):
     bus = busClass(bus_url)
     cache = cacheClass(cache_url)
@@ -42,7 +51,7 @@ def start_consumer(
         onConsuming,
         bus,
         cache,
-        components,
+        compose_components(components),
     )
     consumer.connect()
 
@@ -78,7 +87,7 @@ def start_server(
     bus_url: str = default_bus_url,
     emitFunction: EmitFunction = blankEmitFunction,
     onConsuming: OnConsuming = blankOnConsuming,
-    components: List[ComponentType] = [],
+    components: List[[type[ComponentType], List[Any]]] = [],
     start=True,
     returnProcess=False,
 ):
