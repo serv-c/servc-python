@@ -51,6 +51,8 @@ def start_consumer(
         onConsuming,
         bus,
         cache,
+        busClass,
+        [bus_url],
         compose_components(components),
     )
     consumer.connect()

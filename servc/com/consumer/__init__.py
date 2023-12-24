@@ -36,6 +36,10 @@ class ConsumerComponent(ServiceComponent):
 
     _onConsuming: OnConsuming
 
+    _busClass: type[BusComponent]
+
+    _busArgs: List[Any]
+
     def __init__(
         self,
         route: str,
@@ -46,6 +50,8 @@ class ConsumerComponent(ServiceComponent):
         onConsuming: OnConsuming,
         bus: BusComponent,
         cache: CacheComponent,
+        busClass: type[BusComponent],
+        busArgs: List[Any],
         otherComponents: List[ServiceComponent] = [],
     ):
         super().__init__()
@@ -57,6 +63,8 @@ class ConsumerComponent(ServiceComponent):
         self._onConsuming = onConsuming
         self._bus = bus
         self._cache = cache
+        self._busClass = busClass
+        self._busArgs = busArgs
 
         self._resolvers["healthz"] = lambda *args: self.healthz(self, *args)
 
@@ -98,7 +106,7 @@ class ConsumerComponent(ServiceComponent):
         return StatusCode.OK
 
     def emitEvent(self, eventName: str, details: Any):
-        bus = self._bus
+        bus = self._busClass(*self._busArgs)
         eventMessage: InputPayload = {
             "type": InputType.EVENT.value,
             "event": eventName,
@@ -108,9 +116,10 @@ class ConsumerComponent(ServiceComponent):
         }
 
         bus.publishMessage(self._route, eventMessage, self._emitFunction)
+        bus.close()
 
     def inputProcessor(self, message: Any) -> StatusCode:
-        bus = self._bus
+        bus = self._busClass(*self._busArgs)
         cache = self._cache
 
         if "type" not in message or "route" not in message:
