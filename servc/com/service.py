@@ -10,6 +10,7 @@ class ComponentType(Enum):
     CONSUMER = "consumer"
     INTERFACE = "interface"
     DATABASE = "database"
+    STORAGE = "storage"
 
 
 class ServiceComponent:

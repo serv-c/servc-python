@@ -1,6 +1,8 @@
 from typing import Any
 
 from servc.com.service import ComponentType, ServiceComponent
+from servc.io.output import StatusCode
+from servc.io.response import generateResponseArtifact
 
 
 class CacheComponent(ServiceComponent):
@@ -21,3 +23,15 @@ class CacheComponent(ServiceComponent):
 
     def deleteKey(self, id: str) -> bool:
         pass
+
+    def setProgress(self, id: str, progress: float, message: str) -> bool:
+        return self.setKey(
+            id,
+            generateResponseArtifact(
+                id,
+                progress,
+                message,
+                StatusCode.OK,
+                False,
+            ),
+        )
