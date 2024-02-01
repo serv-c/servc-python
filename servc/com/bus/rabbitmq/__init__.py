@@ -115,11 +115,11 @@ class BusRabbitMQ(BusComponent):
                 self._channel.stop_consuming()
                 self._channel.close()
             except Exception as e:
-                print(e)
+                print(e, flush=True)
             try:
                 self._conn.close()
             except Exception as e:
-                print(e)
+                print(e, flush=True)
             self._conn = None
             return True
         return False

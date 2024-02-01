@@ -54,7 +54,7 @@ class HTTPInterface(ServiceComponent):
         self.bindRoutes()
         self._isOpen = True
         self._isReady = True
-        print("Listening on port", self._port)
+        print("Listening on port", self._port, flush=True)
         self._server.run(port=self._port, host="0.0.0.0")
 
     def _close(self):
