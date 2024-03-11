@@ -105,7 +105,7 @@ class HTTPInterface(ServiceComponent):
                     "argumentId": body["argumentId"] if body["argumentId"] else "plain",
                     "type": InputType.INPUT.value,
                 }
-                if body["instanceId"]:
+                if "instanceId" in body:
                     value["instanceId"] = body["instanceId"]
                 else:
                     return "bad request", 400
@@ -113,9 +113,9 @@ class HTTPInterface(ServiceComponent):
                     value,
                     self._bus,
                     self._cache,
-                    force,
                     simpleIDGenerator,
-                    self._consumer._children,
+                    force,
+                    [],
                 )
                 return id
         return "Content-Type not supported"
