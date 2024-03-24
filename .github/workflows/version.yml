@@ -1,0 +1,9 @@
+name: 'Changelong'
+on: 
+  - push
+
+jobs: 
+  version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: https://git.yusufali.ca/actions/commit@main

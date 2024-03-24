@@ -1,14 +1,14 @@
-name: "Unit Tests"
+name: 'Unit Tests'
 on:
-  pull_request:
-  push:
+  - push
 
 jobs:
   unittest:
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ['3.12', '3.11']
 
     services:
       rabbitmq:
@@ -30,7 +30,7 @@ jobs:
           - 6379:6379
 
       postgres:
-        image: postgres:13
+        image: postgres
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: postgres
@@ -43,27 +43,44 @@ jobs:
           - 5432:5432
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - if: gitea.workspace != ''
+        run: sleep 20s
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+
+      - name: Lint
+        run: |
+          pip install isort black flake8 coverage
+          isort servc
+          black servc
+          flake8 --ignore=E501,W503 servc
+          git status
+          git diff --exit-code servc
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install --no-cache-dir -r requirements.txt
-          python -m pip install coverage
+          pip install -r requirements.txt
+          if [ ! -f .coveragerc ]; then
+            echo "[run]" >> .coveragerc
+            echo "omit =" >> .coveragerc
+            echo "  tests/*" >> .coveragerc
+            echo "  worker.py" >> .coveragerc
+          fi
 
       - name: Run tests
         env:
-          DATABASE_URL: postgres://postgres:postgres@localhost/postgres
-          REDIS_URL: redis://localhost
-          CLOUDAMQP_URL: amqp://guest:guest@localhost
-          COVERAGE: ${{ secrets.COVERAGE }}
+          COVERAGE: ${{ env.COVERAGE}}
+          DATABASE_URL: postgres://postgres:postgres@postgres/postgres
+          CACHE_URL: redis://redis
+          BUS_URL: amqp://guest:guest@rabbitmq
         run: |
           coverage run --concurrency=multiprocessing -m unittest tests/*.py
           coverage combine
-          coverage report -m --fail-under ${COVERAGE:-80}
+          coverage report -m --fail-under=${COVERAGE:-80}
