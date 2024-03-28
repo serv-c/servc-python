@@ -18,8 +18,8 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project.urls]
-"Homepage" = "https://github.com/serv-c/svc-lib-server-python"
-"Bug Tracker" = "https://github.com/serv-c/svc-lib-server-python/issues"
+"Homepage" = "https://github.com/serv-c/servc-lib-python"
+"Bug Tracker" = "https://github.com/serv-c/servc-lib-python/issues"
 
 [tool.semantic_release]
 assets = []
