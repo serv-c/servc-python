@@ -15,7 +15,7 @@ from servc.config import port as default_port
 
 blankEmitFunction: EmitFunction = lambda route, message, code: None
 blankOnConsuming: OnConsuming = lambda route: print(
-    "Consuming on route ", route, flushh=True
+    "Consuming on route ", route, flush=True
 )
 
 
