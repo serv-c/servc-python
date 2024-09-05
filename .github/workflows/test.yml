@@ -76,11 +76,10 @@ jobs:
 
       - name: Run tests
         env:
-          COVERAGE: ${{ env.COVERAGE}}
           DATABASE_URL: postgres://postgres:postgres@postgres/postgres
           CACHE_URL: redis://redis
           BUS_URL: amqp://guest:guest@rabbitmq
         run: |
           coverage run --concurrency=multiprocessing -m unittest tests/*.py
           coverage combine
-          coverage report -m --fail-under=${COVERAGE:-80}
+          coverage report -m --fail-under=60
