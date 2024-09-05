@@ -141,7 +141,7 @@ class BusRabbitMQ(BusComponent):
 
         channel = self._conn.channel()
         exchangeName = (
-            "amqp.fanout"
+            os.environ.get("FANOUT_EXCHANGE", "amq.fanout")
             if "type" in message
             and message["type"] in [InputType.EVENT.value, InputType.EVENT]
             else ""
