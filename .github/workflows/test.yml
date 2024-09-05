@@ -17,7 +17,7 @@ jobs:
           RABBITMQ_DEFAULT_USER: guest
           RABBITMQ_DEFAULT_PASS: guest
         ports:
-          - 5672:5672
+          - 5672/tcp
 
       redis:
         image: redis
@@ -27,7 +27,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
         ports:
-          - 6379:6379
+          - 6379/tcp
 
       postgres:
         image: postgres
@@ -40,7 +40,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
         ports:
-          - 5432:5432
+          - 5432/tcp
 
     steps:
       - if: gitea.workspace != ''
