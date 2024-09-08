@@ -129,6 +129,7 @@ class BusRabbitMQ(BusComponent):
         channel.queue_declare(
             queue=queueName, durable=True, exclusive=False, auto_delete=False
         )
+        channel.queue_bind(exchange=os.environ.get("FANOUT_EXCHANGE", "amq.fanout"), queue=queueName)
 
     def publishMessage(
         self,
@@ -148,7 +149,6 @@ class BusRabbitMQ(BusComponent):
             else ""
         )
 
-        self.queue_declare(channel, route)
         channel.basic_publish(
             exchange=exchangeName,
             routing_key=route,
