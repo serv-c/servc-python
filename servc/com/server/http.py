@@ -1,4 +1,5 @@
 import os
+import uuid
 from multiprocessing import Process
 
 from flask import Flask, jsonify, request
@@ -98,8 +99,10 @@ class HTTPInterface(ServiceComponent):
             body = request.json
             if body and body["route"] and body["inputs"]:
                 force = False if "force" not in body else body["force"]
+                no_id = ("id" not in body) or ("id" in body and body["id"] in ("", "0"))
+
                 value: InputPayload = {
-                    "id": "0",
+                    "id": str(uuid.uuid4()) if no_id else body["id"],
                     "route": body["route"],
                     "inputs": body["inputs"],
                     "argumentId": body["argumentId"] if body["argumentId"] else "plain",
