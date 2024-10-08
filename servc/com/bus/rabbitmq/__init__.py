@@ -125,6 +125,15 @@ class BusRabbitMQ(BusComponent):
             return True
         return False
 
+    def get_channel(self):
+        try:
+            return self._conn.channel()
+        except pika.exceptions.StreamLostError as e:
+            print(str(e), flush=True)
+            self._conn = None
+            self._connect()
+            return self.get_channel()
+
     def queue_declare(self, channel: Any, queueName: str):
         channel.queue_declare(
             queue=queueName, durable=True, exclusive=False, auto_delete=False
@@ -143,7 +152,7 @@ class BusRabbitMQ(BusComponent):
             self._connect()
             return self.publishMessage(route, message, emitFunction)
 
-        channel = self._conn.channel()
+        channel = self.get_channel()
         exchangeName = (
             os.environ.get("FANOUT_EXCHANGE", "amq.fanout")
             if "type" in message
@@ -170,7 +179,7 @@ class BusRabbitMQ(BusComponent):
         emitFunction: EmitFunction = None,
         onConsuming: OnConsuming = None,
     ) -> bool:
-        channel = self._conn.channel()
+        channel = self.get_channel()
 
         self.queue_declare(channel, route)
         channel.basic_qos(prefetch_count=1)
@@ -178,7 +187,7 @@ class BusRabbitMQ(BusComponent):
             consume_non_block, (self._conn, inputProcessor, emitFunction)
         )
         channel.basic_consume(queue=route, on_message_callback=msg_cb, auto_ack=False)
-        self._channel = channel
+        channel = self.get_channel()
         channel.start_consuming()
 
         if onConsuming:
