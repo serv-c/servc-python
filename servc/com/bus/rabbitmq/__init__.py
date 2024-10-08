@@ -187,7 +187,7 @@ class BusRabbitMQ(BusComponent):
             consume_non_block, (self._conn, inputProcessor, emitFunction)
         )
         channel.basic_consume(queue=route, on_message_callback=msg_cb, auto_ack=False)
-        channel = self.get_channel()
+        self._channel = channel
         channel.start_consuming()
 
         if onConsuming:
