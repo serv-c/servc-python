@@ -1,0 +1,26 @@
+name: 'Mirror to GitHub'
+on:
+  - push
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Install git
+        if: github.ref_name == 'main' && github.server_url != 'https://github.com'
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.GIT_SERVC_TOKEN }}
+          URL: github.com/${{ github.repository }}.git
+        run: |
+          sudo apt-get install -y git
+          git checkout main
+          git push https://drgroot:${TOKEN}@${URL} main
+          git push https://drgroot:${TOKEN}@${URL} --tags
+      

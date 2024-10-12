@@ -1,0 +1,11 @@
+name: 'Serv-C Unit Test'
+on:
+  - push
+
+jobs:
+  servc:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run Servc Tests
+        uses: serv-c/docs@0.2.12

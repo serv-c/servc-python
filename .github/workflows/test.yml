@@ -43,7 +43,7 @@ jobs:
           - 5432/tcp
 
     steps:
-      - if: gitea.workspace != ''
+      - if: github.server_url != 'https://github.com'
         run: sleep 20s
 
       - uses: actions/checkout@v4
