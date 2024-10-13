@@ -1,4 +1,3 @@
 [run]
 omit = 
   tests/*
-  servc/com/bus/rabbitmq/rpc.py

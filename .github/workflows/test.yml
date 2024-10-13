@@ -29,19 +29,6 @@ jobs:
         ports:
           - 6379/tcp
 
-      postgres:
-        image: postgres
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: postgres
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432/tcp
-
     steps:
       - if: github.server_url != 'https://github.com'
         run: sleep 20s
@@ -54,14 +41,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Lint
+      - name: Type check
         run: |
-          pip install isort black flake8 coverage
-          isort servc
-          black servc
-          flake8 --ignore=E501,W503 servc
-          git status
-          git diff --exit-code servc
+          pip install mypy
+          pip install types-PyYAML types-simplejson
+          mypy servc
 
       - name: Install dependencies
         run: |
@@ -76,10 +60,9 @@ jobs:
 
       - name: Run tests
         env:
-          DATABASE_URL: postgres://postgres:postgres@postgres/postgres
           CACHE_URL: redis://redis
           BUS_URL: amqp://guest:guest@rabbitmq
         run: |
-          coverage run --concurrency=multiprocessing -m unittest tests/*.py
-          coverage combine
+          pip install coverage
+          coverage run -m unittest tests/**/*.py
           coverage report -m --fail-under=60

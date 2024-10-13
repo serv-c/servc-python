@@ -8,14 +8,13 @@ services:
     command: sleep infinity
     environment:
       CACHE_URL: redis://redis:6379/0
-      BUS_URL: amqp://rabbitmq:rabbitmq@rabbitmq
+      BUS_URL: amqp://rabbitmq:rabbitmq@rabbitmq/
     links:
       - rabbitmq
       - redis
 
   redis:
     image: redis
-    container_name: redis
     restart: unless-stopped
     expose:
       - "6379"
@@ -24,11 +23,10 @@ services:
 
   rabbitmq:
     image: rabbitmq:3-management
-    container_name: rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: rabbitmq
       RABBITMQ_DEFAULT_PASS: rabbitmq
-      RABBITMQ_DEFAULT_VHOST: / 
+      RABBITMQ_DEFAULT_VHOST: /
     ports:
       - "5672:5672"
       - "15672:15672"

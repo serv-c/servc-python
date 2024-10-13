@@ -1,4 +1,0 @@
-import os
-
-BULK_JOB_SEPARATOR = os.getenv("SERVC_BULK_JOB_SEPARATOR", "__")
-BULK_JOB_DELIMITER = os.getenv("SERVC_BULK_JOB_DELIMITER", "||")

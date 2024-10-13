@@ -1,10 +1,12 @@
-from servc.com.server.server import start_server
+from servc.server import start_server
+
 
 def main():
     return start_server(
         resolver={},
-        eventResolver={},
+        # route="test",
     )
+
 
 if __name__ == '__main__':
     main()

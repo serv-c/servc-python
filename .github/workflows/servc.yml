@@ -1,6 +1,6 @@
 name: 'Serv-C Unit Test'
 on:
-  - push
+  - pull_request
 
 jobs:
   servc:
