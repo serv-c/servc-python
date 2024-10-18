@@ -8,6 +8,7 @@ from servc.com.cache.redis import CacheRedis
 from servc.com.consumer import RESOLVER_MAPPING, ConsumerComponent
 from servc.com.server.http import HTTPInterface
 from servc.com.service import ComponentType
+from servc.config import bind_to_event_exchange as default_bind_to_event_exchange
 from servc.config import bus_url as default_bus_url
 from servc.config import cache_url as default_cache_url
 from servc.config import instance_id as default_instance_id
@@ -38,6 +39,7 @@ def start_consumer(
     instance_id: str,
     cache_url: str,
     bus_url: str,
+    bind_to_event_exchange: bool,
     emitFunction: EmitFunction,
     onConsuming: OnConsuming,
     components: List[[type[ComponentType], List[Any]]],
@@ -55,6 +57,7 @@ def start_consumer(
         cache,
         busClass,
         [bus_url],
+        bind_to_event_exchange,
         compose_components(components),
     )
     consumer.connect()
@@ -94,6 +97,7 @@ def start_server(
     components: List[[type[ComponentType], List[Any]]] = [],
     start=True,
     returnProcess=False,
+    bind_to_event_exchange: bool = default_bind_to_event_exchange,
 ):
     consumer = Process(
         target=start_consumer,
@@ -107,6 +111,7 @@ def start_server(
             instance_id,
             cache_url,
             bus_url,
+            bind_to_event_exchange,
             emitFunction,
             onConsuming,
             components,

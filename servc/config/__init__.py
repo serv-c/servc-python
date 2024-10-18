@@ -12,3 +12,4 @@ db_url = os.getenv("DATABASE_URL", postgres_url)
 
 port = int(os.getenv("PORT", 3000))
 instance_id = os.getenv("INSTANCE_ID", socket.gethostname())
+bind_to_event_exchange = os.getenv("BIND_TO_EVENT_EXCHANGE", "true").lower() != "false"

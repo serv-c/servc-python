@@ -40,6 +40,8 @@ class ConsumerComponent(ServiceComponent):
 
     _busArgs: List[Any]
 
+    _bindToEventExchange: bool
+
     def __init__(
         self,
         route: str,
@@ -52,6 +54,7 @@ class ConsumerComponent(ServiceComponent):
         cache: CacheComponent,
         busClass: type[BusComponent],
         busArgs: List[Any],
+        bind_to_event_exchange: bool,
         otherComponents: List[ServiceComponent] = [],
     ):
         super().__init__()
@@ -65,6 +68,9 @@ class ConsumerComponent(ServiceComponent):
         self._cache = cache
         self._busClass = busClass
         self._busArgs = busArgs
+        self._bindToEventExchange = (
+            bind_to_event_exchange if len(self._eventResolvers.keys()) > 0 else False
+        )
 
         self._resolvers["healthz"] = lambda *args: self.healthz(self, *args)
 
@@ -84,11 +90,19 @@ class ConsumerComponent(ServiceComponent):
     def connect(self):
         super().connect()
 
+        print("Consumer now Subscribing", flush=True)
+        print(" Route:", self._route, flush=True)
+        print(" InstanceId:", self._instanceId, flush=True)
+        print(" Resolvers:", self._resolvers.keys(), flush=True)
+        print(" Event Resolvers:", self._eventResolvers.keys(), flush=True)
+        print(" Bind to Event Exchange:", self._bindToEventExchange, flush=True)
+
         self._bus.subscribe(
             self._route,
             self.inputProcessor,
             self._emitFunction,
             self._onConsuming,
+            bindToEventExchange=self._bindToEventExchange,
         )
 
     def healthz(

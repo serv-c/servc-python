@@ -134,13 +134,15 @@ class BusRabbitMQ(BusComponent):
             self._connect()
             return self.get_channel()
 
-    def queue_declare(self, channel: Any, queueName: str):
+    def queue_declare(self, channel: Any, queueName: str, bindToEventExchange: bool):
         channel.queue_declare(
             queue=queueName, durable=True, exclusive=False, auto_delete=False
         )
-        channel.queue_bind(
-            exchange=os.environ.get("FANOUT_EXCHANGE", "amq.fanout"), queue=queueName
-        )
+        if bindToEventExchange:
+            channel.queue_bind(
+                exchange=os.environ.get("FANOUT_EXCHANGE", "amq.fanout"),
+                queue=queueName,
+            )
 
     def publishMessage(
         self,
@@ -178,10 +180,11 @@ class BusRabbitMQ(BusComponent):
         inputProcessor: InputProcessor,
         emitFunction: EmitFunction = None,
         onConsuming: OnConsuming = None,
+        bindToEventExchange: bool = True,
     ) -> bool:
         channel = self.get_channel()
 
-        self.queue_declare(channel, route)
+        self.queue_declare(channel, route, bindToEventExchange)
         channel.basic_qos(prefetch_count=1)
         msg_cb = functools.partial(
             consume_non_block, (self._conn, inputProcessor, emitFunction)

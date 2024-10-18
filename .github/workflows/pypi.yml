@@ -6,6 +6,8 @@ jobs:
   packagepublish:
     runs-on: ubuntu-latest
     steps:
+      - run: sleep 2m
+
       - uses: https://git.yusufali.ca/actions/pythonpip@main
         with:
           pypiptoken: ${{ secrets.PYPI_TOKEN }}
