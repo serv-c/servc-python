@@ -2,7 +2,7 @@ import os
 from multiprocessing import Process
 from typing import Dict, Tuple, TypedDict
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request  # type: ignore
 
 from servc.svc import ComponentType, Middleware
 from servc.svc.client.send import sendMessage

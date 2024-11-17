@@ -6,6 +6,73 @@ jobs:
   servc:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        python-version: 
+          - 3.13
+
+    services:
+      rabbitmq:
+        image: rabbitmq:3
+        env:
+          RABBITMQ_DEFAULT_USER: guest
+          RABBITMQ_DEFAULT_PASS: guest
+        ports:
+          - 5672/tcp
+
+      redis:
+        image: redis
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379/tcp
+
     steps:
-      - name: Run Servc Tests
-        uses: serv-c/docs@0.2.12
+      - if: github.server_url != 'https://github.com'
+        run: sleep 20s
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Set Environment Variables
+        run: |
+          echo "CURRENT_PATH=$(pwd)" >> $GITHUB_ENV
+          chmod +x start.sh
+
+      - name: Checkout Serv-C
+        uses: actions/checkout@v4
+        with:
+          repository: serv-c/docs
+          ref: main
+          path: servc-docs
+          sparse-checkout: |
+            tests
+            requirements.test.txt
+            config/.placeholder
+
+      - name: Install Serv-C Dependencies
+        run: pip install -r requirements.test.txt
+        shell: bash
+        working-directory: servc-docs
+
+      - name: Run Serv-C tests
+        shell: bash
+        working-directory: servc-docs
+        env:
+          START_SCRIPT: ${{ env.CURRENT_PATH }}/start.sh
+          CACHE_URL: redis://redis
+          BUS_URL: amqp://guest:guest@rabbitmq
+        run: python -m unittest tests/**/*.py
