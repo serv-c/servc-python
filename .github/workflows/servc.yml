@@ -6,6 +6,53 @@ jobs:
   servc:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        python-version: 
+          - 3.13
+
+    services:
+      rabbitmq:
+        image: rabbitmq:3
+        env:
+          RABBITMQ_DEFAULT_USER: guest
+          RABBITMQ_DEFAULT_PASS: guest
+        ports:
+          - 5672/tcp
+
+      redis:
+        image: redis
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379/tcp
+
     steps:
+      - if: github.server_url != 'https://github.com'
+        run: sleep 20s
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Set Environment Variables
+        run: |
+          echo "CURRENT_PATH=$(pwd)" >> $GITHUB_ENV
+          echo "CACHE_URL=redis://redis" >> $GITHUB_ENV
+          echo "BUS_URL=amqp://guest:guest@rabbitmq" >> $GITHUB_ENV
+          chmod +x start.sh
+
       - name: Run Servc Tests
-        uses: serv-c/docs@0.2.12
+        uses: serv-c/docs@0.2.14
+        with:
+          startcmd: ${{ env.CURRENT_PATH }}/start.sh

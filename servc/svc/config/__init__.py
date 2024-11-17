@@ -19,6 +19,7 @@ defaults = {
         os.getenv("CONF__BUS__ROUTEMAP", json.dumps({}))
     ),
     "conf.bus.prefix": "",
+    "conf.bus.bindtoeventexchange": True,
 }
 
 

@@ -44,6 +44,8 @@ class WorkerComponent(Middleware):
 
     _config: Config
 
+    _bindToEventExchange: bool
+
     def __init__(
         self,
         route: str,
@@ -65,6 +67,11 @@ class WorkerComponent(Middleware):
         self._bus = bus
         self._cache = cache
         self._config = config
+        self._bindToEventExchange = (
+            config.get("conf.bus.bindtoeventexchange")
+            if len(self._eventResolvers.keys()) > 0
+            else False
+        )
 
         self._resolvers["healthz"] = lambda *args: HEALTHZ(*args)
 
@@ -84,10 +91,18 @@ class WorkerComponent(Middleware):
     def connect(self):
         super().connect()
 
+        print("Consumer now Subscribing", flush=True)
+        print(" Route:", self._route, flush=True)
+        print(" InstanceId:", self._instanceId, flush=True)
+        print(" Resolvers:", self._resolvers.keys(), flush=True)
+        print(" Event Resolvers:", self._eventResolvers.keys(), flush=True)
+        print(" Bind to Event Exchange:", self._bindToEventExchange, flush=True)
+
         self._bus.subscribe(
             self._route,
             self.inputProcessor,
             self._onConsuming,
+            bindEventExchange=self._bindToEventExchange,
         )
 
     def emitEvent(self, eventName: str, details: Any):
@@ -173,14 +188,12 @@ class WorkerComponent(Middleware):
                     artifact["inputs"],
                     self._children,
                 )
-                cache.setKey(message["id"], getAnswerArtifact(
-                    message["id"], response))
+                cache.setKey(message["id"], getAnswerArtifact(message["id"], response))
                 return StatusCode.OK
             except Exception as e:
                 cache.setKey(
                     message["id"],
-                    getErrorArtifact(message["id"], str(
-                        e), StatusCode.SERVER_ERROR),
+                    getErrorArtifact(message["id"], str(e), StatusCode.SERVER_ERROR),
                 )
                 return StatusCode.SERVER_ERROR
 
