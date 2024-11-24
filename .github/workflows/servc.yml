@@ -59,7 +59,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: serv-c/docs
-          ref: main
+          ref: 0.2.15
           path: servc-docs
           sparse-checkout: |
             tests
