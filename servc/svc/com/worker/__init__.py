@@ -4,9 +4,11 @@ from servc.svc import ComponentType, Middleware
 from servc.svc.com.bus import BusComponent, OnConsuming
 from servc.svc.com.cache import CacheComponent
 from servc.svc.config import Config
-from servc.svc.io.input import EventPayload, InputType
+from servc.svc.io.input import EventPayload, InputPayload, InputType, ArgumentArtifact
 from servc.svc.io.output import StatusCode
 from servc.svc.io.response import getAnswerArtifact, getErrorArtifact
+from servc.svc.client.send import sendMessage
+from servc.svc.idgen.simple import simple as idGenerator
 
 RESOLVER = Callable[
     [str, BusComponent, CacheComponent, Any, List[Middleware]],
@@ -46,6 +48,8 @@ class WorkerComponent(Middleware):
 
     _bindToEventExchange: bool
 
+    _busClass: type[BusComponent]
+
     def __init__(
         self,
         route: str,
@@ -54,6 +58,7 @@ class WorkerComponent(Middleware):
         eventResolvers: RESOLVER_MAPPING,
         onConsuming: OnConsuming,
         bus: BusComponent,
+        busClass: type[BusComponent],
         cache: CacheComponent,
         config: Config,
         otherComponents: List[Middleware] = [],
@@ -65,6 +70,7 @@ class WorkerComponent(Middleware):
         self._eventResolvers = eventResolvers
         self._onConsuming = onConsuming
         self._bus = bus
+        self._busClass = busClass
         self._cache = cache
         self._config = config
         self._bindToEventExchange = (
@@ -116,8 +122,38 @@ class WorkerComponent(Middleware):
 
         self._bus.publishMessage(self._route, eventMessage)
 
+    def processPostHooks(self, bus: BusComponent, message: InputPayload, artifact: ArgumentArtifact):
+        # print(artifact)
+        if "hooks" in artifact and "on_complete" in artifact["hooks"]:
+            for hook in artifact["hooks"]["on_complete"]:
+                if hook["type"] == "sendmessage":
+                    try:
+                        payload: InputPayload = {
+                            "id": "",
+                            "type": InputType.INPUT.value,
+                            "route": hook["route"],
+                            "force": message["force"] if "force" in message else False,
+                            "argumentId": "",
+                            "argument": {
+                                "method": hook["method"],
+                                "inputs": {
+                                    "id": message["id"],
+                                    "method": artifact["method"],
+                                    "inputs": artifact["inputs"]
+                                },
+                            }
+                        }
+                        sendMessage(payload, bus, self._cache, idGenerator)
+                    except Exception as e:
+                        print("Unable to process post hook", flush=True)
+                        print(e, flush=True)
+
     def inputProcessor(self, message: Any) -> StatusCode:
-        bus = self._bus
+        bus = self._busClass(
+            self._config.get("conf.bus.url"),
+            self._config.get("conf.bus.routemap"),
+            self._config.get("conf.bus.prefix"),
+        )
         cache = self._cache
 
         if "type" not in message or "route" not in message:
@@ -188,13 +224,17 @@ class WorkerComponent(Middleware):
                     artifact["inputs"],
                     self._children,
                 )
-                cache.setKey(message["id"], getAnswerArtifact(message["id"], response))
+                cache.setKey(message["id"], getAnswerArtifact(
+                    message["id"], response))
+                self.processPostHooks(bus, message, artifact)
                 return StatusCode.OK
             except Exception as e:
                 cache.setKey(
                     message["id"],
-                    getErrorArtifact(message["id"], str(e), StatusCode.SERVER_ERROR),
+                    getErrorArtifact(message["id"], str(
+                        e), StatusCode.SERVER_ERROR),
                 )
+                self.processPostHooks(bus, message, artifact)
                 return StatusCode.SERVER_ERROR
 
         cache.setKey(

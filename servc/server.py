@@ -51,6 +51,7 @@ def start_consumer(
         eventResolver,
         onConsuming,
         bus,
+        busClass,
         cache,
         config,
         compose_components(components),

@@ -26,6 +26,11 @@ class EventPayload(GenericInput):
     instanceId: str
 
 
+class Hooks(TypedDict):
+    on_complete: NotRequired[list[dict[str, str]]]
+
+
 class ArgumentArtifact(TypedDict):
     method: str
     inputs: Any
+    hooks: NotRequired[Hooks]
