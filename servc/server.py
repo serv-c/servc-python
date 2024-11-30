@@ -89,6 +89,7 @@ def start_server(
             onConsuming,
             components,
         ),
+        daemon=True,
     )
     consumer.start()
 

@@ -12,7 +12,7 @@ Here is the most simple example of use, starting a server to handle requests at 
 ```python
 from servc.server import start_server
 
-def inputProcessor(messageId, bus, cache, payload, components):
+def inputProcessor(messageId, bus, cache, payload, components, emitEvent):
   pass
 
 # the method 'methodA' will be resolved by inputProcessor

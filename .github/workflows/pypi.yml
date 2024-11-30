@@ -1,18 +1,40 @@
 name: 'Package Publish'
 on: 
-  - push
+  push:
+  pull_request:
 
 jobs: 
   packagepublish:
     runs-on: ubuntu-latest
     steps:
-      - uses: https://git.yusufali.ca/actions/commit@main
-
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           submodules: true
-          fetch-depth: 0
+          fetch-depth: 100
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'latest'
+
+      - name: Install lint
+        shell: bash
+        run: |
+          npm install -g @commitlint/cli @commitlint/config-conventional
+          if [ ! -f "commitlint.config.js" ]; then
+            echo "module.exports = {extends: ['@commitlint/config-conventional']}" > commitlint.config.js
+          fi        
+
+      - name: Lint Commit Message
+        if: github.event_name == 'push'
+        shell: bash
+        run: commitlint --from=HEAD~2 --verbose || true
+
+      - name: Lint Pull Request
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
 
       - uses: actions/setup-python@v5
         with:

@@ -45,8 +45,7 @@ class CacheRedis(CacheComponent):
             self.connect()
             return self.setKey(id, value)
         self._redisClient.set(
-            id, simplejson.dumps(
-                value, default=decimal_default, ignore_nan=True)
+            id, simplejson.dumps(value, default=decimal_default, ignore_nan=True)
         )
         return id
 

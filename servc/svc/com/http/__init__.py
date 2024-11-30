@@ -141,8 +141,7 @@ class HTTPInterface(Middleware):
                     body["instanceId"] if "instanceId" in body else self._instanceId
                 )
 
-                id = self._bus.emitEvent(
-                    body["event"], instanceId, body["details"])
+                id = self._bus.emitEvent(body["event"], instanceId, body["details"])
                 return id
             elif body["type"] == InputType.INPUT.value:
                 must_have_keys = ("route", "argument")
@@ -156,6 +155,8 @@ class HTTPInterface(Middleware):
                     "id": body["id"] if "id" in body else "",
                     "argument": body["argument"],
                 }
+                if "instanceId" in body:
+                    payload["instanceId"] = body["instanceId"]
 
                 id = sendMessage(
                     payload,
@@ -175,12 +176,9 @@ class HTTPInterface(Middleware):
         return jsonify(self._info)
 
     def bindRoutes(self):
-        self._server.add_url_rule(
-            "/healthz", "healthz", self._health, methods=["GET"])
-        self._server.add_url_rule(
-            "/readyz", "readyz", self._health, methods=["GET"])
+        self._server.add_url_rule("/healthz", "healthz", self._health, methods=["GET"])
+        self._server.add_url_rule("/readyz", "readyz", self._health, methods=["GET"])
         self._server.add_url_rule(
             "/id/<id>", "_getResponse", self._getResponse, methods=["GET"]
         )
-        self._server.add_url_rule(
-            "/", "", self._postMessage, methods=["POST", "GET"])
+        self._server.add_url_rule("/", "", self._postMessage, methods=["POST", "GET"])

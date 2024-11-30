@@ -13,6 +13,12 @@ jobs:
       matrix:
         python-version: 
           - 3.13
+        test:
+          - service/test_config
+          - service/test_h
+          - service/test_p
+          - service/test_simple_metho
+          - config/
 
     services:
       rabbitmq:
@@ -53,13 +59,12 @@ jobs:
       - name: Set Environment Variables
         run: |
           echo "CURRENT_PATH=$(pwd)" >> $GITHUB_ENV
-          chmod +x start.sh
 
       - name: Checkout Serv-C
         uses: actions/checkout@v4
         with:
           repository: serv-c/docs
-          ref: 0.3.2
+          ref: 0.3.3
           path: servc-docs
           sparse-checkout: |
             tests
@@ -75,7 +80,7 @@ jobs:
         shell: bash
         working-directory: servc-docs
         env:
-          START_SCRIPT: ${{ env.CURRENT_PATH }}/start.sh
+          START_SCRIPT: ${{ env.CURRENT_PATH }}/main.py
           CACHE_URL: redis://redis
           BUS_URL: amqp://guest:guest@rabbitmq
-        run: python -m unittest tests/**/*.py
+        run: python -m unittest tests/${{ matrix.test }}*.py

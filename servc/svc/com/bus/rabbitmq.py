@@ -7,8 +7,8 @@ import pika  # type: ignore
 import pika.channel  # type: ignore
 import pika.exceptions  # type: ignore
 import simplejson
-from pika.adapters.blocking_connection import BlockingConnection  # type: ignore
 from pika.adapters.asyncio_connection import AsyncioConnection  # type: ignore
+from pika.adapters.blocking_connection import BlockingConnection  # type: ignore
 
 from servc.svc.com.bus import BusComponent, InputProcessor, OnConsuming
 from servc.svc.com.cache.redis import decimal_default
@@ -40,13 +40,12 @@ class BusRabbitMQ(BusComponent):
     @property
     def isReady(self) -> bool:
         return (
-            self._conn is not None and self._conn.is_open and (
-                self.isBlockingConnection() or
-                not self._conn.is_closing
-            )
+            self._conn is not None
+            and self._conn.is_open
+            and (self.isBlockingConnection() or not self._conn.is_closing)
         )
 
-    @ property
+    @property
     def isOpen(self) -> bool:
         return self.isReady
 
@@ -67,9 +66,10 @@ class BusRabbitMQ(BusComponent):
 
     def _close(self):
         if self.isOpen or self.isReady:
-            if self._conn and not self._conn.is_closed and (
-                self.isBlockingConnection() or
-                not self._conn.is_closing
+            if (
+                self._conn
+                and not self._conn.is_closed
+                and (self.isBlockingConnection() or not self._conn.is_closing)
             ):
                 self._conn.close()
                 self._conn = None
@@ -117,8 +117,7 @@ class BusRabbitMQ(BusComponent):
             exchange=exchangeName,
             routing_key=self.getRoute(route),
             properties=None,
-            body=simplejson.dumps(
-                message, default=decimal_default, ignore_nan=True),
+            body=simplejson.dumps(message, default=decimal_default, ignore_nan=True),
         )
         channel.close()
 
@@ -135,9 +134,8 @@ class BusRabbitMQ(BusComponent):
         if not self.isReady:
             self._connect(
                 self.subscribe,
-                (route, inputProcessor,
-                 onConsuming, bindEventExchange),
-                blocking=False
+                (route, inputProcessor, onConsuming, bindEventExchange),
+                blocking=False,
             )
             self._conn.ioloop.run_forever()  # type: ignore
         elif self.isBlockingConnection():
@@ -145,8 +143,7 @@ class BusRabbitMQ(BusComponent):
             return self.subscribe(route, inputProcessor, onConsuming, bindEventExchange)
         if not channel:
             return self.get_channel(
-                self.subscribe, (route, inputProcessor,
-                                 onConsuming, bindEventExchange)
+                self.subscribe, (route, inputProcessor, onConsuming, bindEventExchange)
             )
         channel.add_on_close_callback(lambda _c, _r: self.close())
         channel.add_on_cancel_callback(lambda _c: self.close())

@@ -27,10 +27,9 @@ def sendMessage(
         if "id" not in message or message["id"] in ["", None]
         else message["id"]
     )
-    response = cache.getKey(id)
-
-    if force:
+    if force or message.get("force", False):
         cache.deleteKey(id)
+    response = cache.getKey(id)
 
     if (
         response

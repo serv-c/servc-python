@@ -1,17 +1,19 @@
 from typing import Any, Callable, Dict, List, Union
 
 from servc.svc import ComponentType, Middleware
+from servc.svc.client.send import sendMessage
 from servc.svc.com.bus import BusComponent, OnConsuming
 from servc.svc.com.cache import CacheComponent
 from servc.svc.config import Config
-from servc.svc.io.input import EventPayload, InputPayload, InputType, ArgumentArtifact
+from servc.svc.idgen.simple import simple as idGenerator
+from servc.svc.io.input import ArgumentArtifact, InputPayload, InputType
 from servc.svc.io.output import StatusCode
 from servc.svc.io.response import getAnswerArtifact, getErrorArtifact
-from servc.svc.client.send import sendMessage
-from servc.svc.idgen.simple import simple as idGenerator
+
+EMIT_EVENT = Callable[[str, Any], None]
 
 RESOLVER = Callable[
-    [str, BusComponent, CacheComponent, Any, List[Middleware]],
+    [str, BusComponent, CacheComponent, Any, List[Middleware], EMIT_EVENT],
     Union[StatusCode, Any, None],
 ]
 
@@ -111,18 +113,12 @@ class WorkerComponent(Middleware):
             bindEventExchange=self._bindToEventExchange,
         )
 
-    def emitEvent(self, eventName: str, details: Any):
-        eventMessage: EventPayload = {
-            "type": InputType.EVENT.value,
-            "event": eventName,
-            "details": details,
-            "route": self._route,
-            "instanceId": self._instanceId,
-        }
+    def emitEvent(self, bus: BusComponent, eventName: str, details: Any):
+        bus.emitEvent(eventName, self._instanceId, details)
 
-        self._bus.publishMessage(self._route, eventMessage)
-
-    def processPostHooks(self, bus: BusComponent, message: InputPayload, artifact: ArgumentArtifact):
+    def processPostHooks(
+        self, bus: BusComponent, message: InputPayload, artifact: ArgumentArtifact
+    ):
         # print(artifact)
         if "hooks" in artifact and "on_complete" in artifact["hooks"]:
             for hook in artifact["hooks"]["on_complete"]:
@@ -139,9 +135,9 @@ class WorkerComponent(Middleware):
                                 "inputs": {
                                     "id": message["id"],
                                     "method": artifact["method"],
-                                    "inputs": artifact["inputs"]
+                                    "inputs": artifact["inputs"],
                                 },
-                            }
+                            },
                         }
                         sendMessage(payload, bus, self._cache, idGenerator)
                     except Exception as e:
@@ -155,6 +151,7 @@ class WorkerComponent(Middleware):
             self._config.get("conf.bus.prefix"),
         )
         cache = self._cache
+        emitEvent: EMIT_EVENT = lambda x, y: self.emitEvent(bus, x, y)
 
         if "type" not in message or "route" not in message:
             return StatusCode.INVALID_INPUTS
@@ -174,6 +171,7 @@ class WorkerComponent(Middleware):
                 cache,
                 {**message},
                 self._children,
+                emitEvent,
             )
             return StatusCode.OK
 
@@ -223,16 +221,15 @@ class WorkerComponent(Middleware):
                     cache,
                     artifact["inputs"],
                     self._children,
+                    emitEvent,
                 )
-                cache.setKey(message["id"], getAnswerArtifact(
-                    message["id"], response))
+                cache.setKey(message["id"], getAnswerArtifact(message["id"], response))
                 self.processPostHooks(bus, message, artifact)
                 return StatusCode.OK
             except Exception as e:
                 cache.setKey(
                     message["id"],
-                    getErrorArtifact(message["id"], str(
-                        e), StatusCode.SERVER_ERROR),
+                    getErrorArtifact(message["id"], str(e), StatusCode.SERVER_ERROR),
                 )
                 self.processPostHooks(bus, message, artifact)
                 return StatusCode.SERVER_ERROR

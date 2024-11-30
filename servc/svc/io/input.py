@@ -1,6 +1,8 @@
 from enum import Enum
 from typing import Any, NotRequired, TypedDict
 
+from servc.svc.io.hooks import Hooks
+
 
 class InputType(Enum):
     INPUT = "input"
@@ -24,10 +26,6 @@ class EventPayload(GenericInput):
     event: str
     details: Any
     instanceId: str
-
-
-class Hooks(TypedDict):
-    on_complete: NotRequired[list[dict[str, str]]]
 
 
 class ArgumentArtifact(TypedDict):
