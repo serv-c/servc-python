@@ -29,7 +29,7 @@ jobs:
       - name: Lint Commit Message
         if: github.event_name == 'push'
         shell: bash
-        run: commitlint --from=HEAD~2 --verbose || true
+        run: commitlint --from=HEAD~2 --verbose
 
       - name: Lint Pull Request
         if: github.event_name == 'pull_request'
@@ -46,7 +46,7 @@ jobs:
         uses: TriPSs/conventional-changelog-action@v3
         with:
           github-token: ${{ github.token }}
-          git-url: git.yusufali.ca
+          git-url: ${{ github.server_url != 'https://github.com' && 'git.yusufali.ca' || 'github.com' }}
           tag-prefix: ""
           output-file: false
           skip-version-file: true

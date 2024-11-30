@@ -14,11 +14,10 @@ jobs:
         python-version: 
           - 3.13
         test:
-          - service/test_config
-          - service/test_h
-          - service/test_p
-          - service/test_simple_metho
-          - config/
+          - test_config
+          - test_h
+          - test_p
+          - test_simple_metho
 
     services:
       rabbitmq:
@@ -83,4 +82,4 @@ jobs:
           START_SCRIPT: ${{ env.CURRENT_PATH }}/main.py
           CACHE_URL: redis://redis
           BUS_URL: amqp://guest:guest@rabbitmq
-        run: python -m unittest tests/${{ matrix.test }}*.py
+        run: python -m unittest tests/**/${{ matrix.test }}*.py
