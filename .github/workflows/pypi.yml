@@ -36,6 +36,25 @@ jobs:
         shell: bash
         run: commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
 
+      - name: "Get Previous tag"
+        id: previoustag
+        uses: "WyriHaximus/github-action-get-previous-tag@v1"
+
+      - name: Conventional Changelog Action
+        id: changelog
+        if: github.ref_name == 'main'
+        uses: TriPSs/conventional-changelog-action@v3
+        with:
+          github-token: ${{ github.token }}
+          git-url: git.yusufali.ca
+          tag-prefix: ""
+          output-file: false
+          skip-version-file: true
+          skip-commit: true
+          skip-ci: false
+          skip-tag: ${{ github.ref_name != 'main' }}
+          fallback-version: ${{ steps.previoustag.outputs.tag }}
+
       - uses: actions/setup-python@v5
         with:
           python-version: 3.13
@@ -45,12 +64,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install build twine        
-
-      - name: Get Current Version
-        id: previoustag
-        uses: "WyriHaximus/github-action-get-previous-tag@v1"
-        with:
-          fallback: 0.0.1
 
       - name: Setup Version
         env:
