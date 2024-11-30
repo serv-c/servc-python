@@ -37,7 +37,7 @@ jobs:
         run: commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
 
       - name: "Get Previous tag"
-        id: previoustag
+        id: previoustagold
         uses: "WyriHaximus/github-action-get-previous-tag@v1"
 
       - name: Conventional Changelog Action
@@ -53,7 +53,11 @@ jobs:
           skip-commit: true
           skip-ci: false
           skip-tag: ${{ github.ref_name != 'main' }}
-          fallback-version: ${{ steps.previoustag.outputs.tag }}
+          fallback-version: ${{ steps.previoustagold.outputs.tag }}
+      
+      - name: "Get Previous tag"
+        id: previoustag
+        uses: "WyriHaximus/github-action-get-previous-tag@v1"
 
       - uses: actions/setup-python@v5
         with:
