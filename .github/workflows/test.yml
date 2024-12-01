@@ -4,10 +4,6 @@ on:
 
 jobs:
   unittest:
-
-    env:
-      RUNNER_TOOL_CACHE: /toolcache
-
     runs-on: ubuntu-latest
 
     strategy:

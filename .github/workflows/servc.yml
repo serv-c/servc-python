@@ -7,10 +7,6 @@ on:
 
 jobs:
   servc:
-
-    env:
-      RUNNER_TOOL_CACHE: /toolcache
-
     runs-on: ubuntu-latest
 
     strategy:
