@@ -1,5 +1,7 @@
 import unittest
+
 import pika
+
 from servc.svc.com.bus.rabbitmq import BusRabbitMQ, queue_declare
 from servc.svc.config import Config
 from servc.svc.io.input import EventPayload, InputType
@@ -41,8 +43,9 @@ class TestRabbitMQ(unittest.TestCase):
         self.bus._routeMap = mapPrefix
         self.assertEqual(self.bus.getRoute(route),
                          "".join([prefix, mapPrefix[route]]))
-        self.assertEqual(self.bus.getRoute("fake_route"),
-                         "".join([prefix, "fake_route"]))
+        self.assertEqual(
+            self.bus.getRoute("fake_route"), "".join([prefix, "fake_route"])
+        )
 
     def test_send_message_no_existence(self):
         route = "test_route"
@@ -98,6 +101,21 @@ class TestRabbitMQ(unittest.TestCase):
     def test_get_fresh_channel(self):
         self.bus.close()
         self.bus.get_channel(None, None)
+
+    def test_nonexistent_queue_length(self):
+        self.assertEqual(self.bus.get_queue_length("test_queue"), 0)
+
+    def test_existent_queue_length(self):
+        route = "test_route"
+        self.bus.delete_queue(route)
+        self.bus.create_queue(route)
+
+        self.assertEqual(self.bus.get_queue_length(route), 0)
+
+        self.bus.publishMessage(route, "test_message")
+        self.assertEqual(self.bus.get_queue_length(route), 1)
+
+        self.bus.delete_queue(route)
 
 
 if __name__ == "__main__":

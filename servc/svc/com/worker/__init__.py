@@ -1,23 +1,14 @@
-from typing import Any, Callable, Dict, List, Union
+from typing import Any, List
 
 from servc.svc import ComponentType, Middleware
-from servc.svc.client.send import sendMessage
 from servc.svc.com.bus import BusComponent, OnConsuming
 from servc.svc.com.cache import CacheComponent
+from servc.svc.com.worker.hooks import evaluate_post_hooks, evaluate_pre_hooks
+from servc.svc.com.worker.types import EMIT_EVENT, RESOLVER_MAPPING
 from servc.svc.config import Config
-from servc.svc.idgen.simple import simple as idGenerator
-from servc.svc.io.input import ArgumentArtifact, InputPayload, InputType
+from servc.svc.io.input import InputType
 from servc.svc.io.output import StatusCode
 from servc.svc.io.response import getAnswerArtifact, getErrorArtifact
-
-EMIT_EVENT = Callable[[str, Any], None]
-
-RESOLVER = Callable[
-    [str, BusComponent, CacheComponent, Any, List[Middleware], EMIT_EVENT],
-    Union[StatusCode, Any, None],
-]
-
-RESOLVER_MAPPING = Dict[str, RESOLVER]
 
 
 def HEALTHZ(
@@ -116,34 +107,6 @@ class WorkerComponent(Middleware):
     def emitEvent(self, bus: BusComponent, eventName: str, details: Any):
         bus.emitEvent(eventName, self._instanceId, details)
 
-    def processPostHooks(
-        self, bus: BusComponent, message: InputPayload, artifact: ArgumentArtifact
-    ):
-        # print(artifact)
-        if "hooks" in artifact and "on_complete" in artifact["hooks"]:
-            for hook in artifact["hooks"]["on_complete"]:
-                if hook["type"] == "sendmessage":
-                    try:
-                        payload: InputPayload = {
-                            "id": "",
-                            "type": InputType.INPUT.value,
-                            "route": hook["route"],
-                            "force": message["force"] if "force" in message else False,
-                            "argumentId": "",
-                            "argument": {
-                                "method": hook["method"],
-                                "inputs": {
-                                    "id": message["id"],
-                                    "method": artifact["method"],
-                                    "inputs": artifact["inputs"],
-                                },
-                            },
-                        }
-                        sendMessage(payload, bus, self._cache, idGenerator)
-                    except Exception as e:
-                        print("Unable to process post hook", flush=True)
-                        print(e, flush=True)
-
     def inputProcessor(self, message: Any) -> StatusCode:
         bus = self._busClass(
             self._config.get("conf.bus.url"),
@@ -214,6 +177,20 @@ class WorkerComponent(Middleware):
                 )
                 return StatusCode.METHOD_NOT_FOUND
 
+            continueExecution = evaluate_pre_hooks(
+                self._route,
+                self._resolvers,
+                bus,
+                cache,
+                message,
+                artifact,
+                self._children,
+                emitEvent,
+            )
+            if not continueExecution:
+                return StatusCode.OK
+
+            statusCode: StatusCode = StatusCode.OK
             try:
                 response = self._resolvers[artifact["method"]](
                     message["id"],
@@ -224,15 +201,15 @@ class WorkerComponent(Middleware):
                     emitEvent,
                 )
                 cache.setKey(message["id"], getAnswerArtifact(message["id"], response))
-                self.processPostHooks(bus, message, artifact)
-                return StatusCode.OK
             except Exception as e:
                 cache.setKey(
                     message["id"],
                     getErrorArtifact(message["id"], str(e), StatusCode.SERVER_ERROR),
                 )
-                self.processPostHooks(bus, message, artifact)
-                return StatusCode.SERVER_ERROR
+                statusCode = StatusCode.SERVER_ERROR
+            finally:
+                evaluate_post_hooks(bus, cache, message, artifact)
+                return statusCode
 
         cache.setKey(
             message["id"],

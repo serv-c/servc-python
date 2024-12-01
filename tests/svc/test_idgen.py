@@ -1,4 +1,5 @@
 import unittest
+
 from servc.svc.idgen.simple import simple
 
 

@@ -38,6 +38,10 @@ def test_resolver(id, bus, cache, payload: str | list[str], _c, emitEvent):
     return True
 
 
+def test_hook(id, _b, _c, p, _ch, _e):
+    return [x for x in p]
+
+
 def fail(id, _b, _c, _p, _ch, _e):
     raise Exception("This is a test exception")
 
@@ -47,8 +51,9 @@ def main():
         resolver={
             "test": test_resolver,
             "fail": fail,
+            "hook": lambda id, _b, _c, p, _ch, _e: len(p),
+            "hook_part": test_hook,
         },
-        # route="test",
     )
 
 

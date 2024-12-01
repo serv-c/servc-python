@@ -29,7 +29,7 @@ def queue_declare(
 
 
 def on_channel_open(channel: pika.channel.Channel, method: Callable, args: Tuple):
-    method(*args, channel)
+    return method(*args, channel)
 
 
 class BusRabbitMQ(BusComponent):
@@ -56,7 +56,7 @@ class BusRabbitMQ(BusComponent):
         if not self.isOpen:
             if blocking:
                 self._conn = BlockingConnection(pika.URLParameters(self._url))
-                self.get_channel(method, args)
+                return self.get_channel(method, args)
             else:
                 self._conn = AsyncioConnection(
                     parameters=pika.URLParameters(self._url),
@@ -89,11 +89,50 @@ class BusRabbitMQ(BusComponent):
         elif method and args and self._conn:
             if self.isBlockingConnection():
                 channel = self._conn.channel()
-                on_channel_open(channel, method, args)
+                return on_channel_open(channel, method, args)
             else:
                 self._conn.channel(
                     on_open_callback=lambda c: on_channel_open(c, method, args)
                 )
+
+    def create_queue(self, queue: str, bindEventExchange: bool = False, channel: pika.channel.Channel | None = None) -> bool:  # type: ignore
+        if not self.isReady:
+            return self._connect(self.create_queue, (queue, bindEventExchange))
+        if not channel:
+            return self.get_channel(self.create_queue, (queue, bindEventExchange))
+
+        queue_declare(channel, self.getRoute(queue), bindEventExchange)
+        channel.close()
+        return True
+
+    def delete_queue(self, queue: str, channel: pika.channel.Channel | None = None) -> bool:  # type: ignore
+        if not self.isReady:
+            return self._connect(self.delete_queue, (queue,))
+        if not channel:
+            return self.get_channel(self.delete_queue, (queue,))
+
+        channel.queue_delete(queue=self.getRoute(queue))
+        channel.close()
+        return True
+
+    def get_queue_length(self, route, channel: pika.channel.Channel | None = None) -> int:  # type: ignore
+        if not self.isReady:
+            return self._connect(self.get_queue_length, (route,))
+        if not channel:
+            return self.get_channel(self.get_queue_length, (route,))
+
+        try:
+            queue = channel.queue_declare(
+                queue=self.getRoute(route),
+                passive=True,
+                durable=True,
+                exclusive=False,
+                auto_delete=False,
+            )
+            channel.close()
+            return queue.method.message_count
+        except pika.exceptions.ChannelClosedByBroker:
+            return 0
 
     def publishMessage(  # type: ignore
         self,

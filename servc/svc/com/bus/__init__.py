@@ -45,6 +45,15 @@ class BusComponent(Middleware):
             },
         )
 
+    def create_queue(self, queue: str, bindEventExchange: bool = True) -> bool:
+        return False
+
+    def delete_queue(self, queue: str) -> bool:
+        return False
+
+    def get_queue_length(self, queue: str) -> int:
+        return 0
+
     def subscribe(
         self,
         route: str,

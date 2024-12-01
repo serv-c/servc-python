@@ -15,10 +15,11 @@ jobs:
           - 3.13
 
         test:
-          - test_config
-          - test_h
-          - test_p
-          - test_simple_metho
+          - test_conf
+          - test_svc_config
+          - test_svc_hooks
+          - test_svc_prefix
+          - test_svc_simple
 
     services:
       rabbitmq:
@@ -64,7 +65,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: serv-c/docs
-          ref: 0.3.3
+          ref: 0.4.1
           path: servc-docs
           sparse-checkout: |
             tests
@@ -83,4 +84,4 @@ jobs:
           START_SCRIPT: ${{ env.CURRENT_PATH }}/main.py
           CACHE_URL: redis://${{ github.server_url != 'https://github.com' && 'redis' || 'localhost' }}
           BUS_URL: amqp://guest:guest@${{ github.server_url != 'https://github.com' && 'rabbitmq' || 'localhost' }}
-        run: python -m unittest tests/**/${{ matrix.test }}*.py
+        run: python -m unittest tests/${{ matrix.test }}*.py
