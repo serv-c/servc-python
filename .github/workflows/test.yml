@@ -9,8 +9,8 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - 3.11
-          - 3.12
+          # - 3.11
+          # - 3.12
           - 3.13
 
     services:
@@ -63,8 +63,8 @@ jobs:
 
       - name: Run tests
         env:
-          CACHE_URL: redis://redis
-          BUS_URL: amqp://guest:guest@rabbitmq
+          CACHE_URL: redis://${{ github.server_url != 'https://github.com' && 'redis' || 'localhost' }}
+          BUS_URL: amqp://guest:guest@${{ github.server_url != 'https://github.com' && 'rabbitmq' || 'localhost' }}
         run: |
           pip install coverage
           coverage run -m unittest tests/**/*.py

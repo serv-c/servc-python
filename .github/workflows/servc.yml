@@ -13,6 +13,7 @@ jobs:
       matrix:
         python-version: 
           - 3.13
+
         test:
           - test_config
           - test_h
@@ -80,6 +81,6 @@ jobs:
         working-directory: servc-docs
         env:
           START_SCRIPT: ${{ env.CURRENT_PATH }}/main.py
-          CACHE_URL: redis://redis
-          BUS_URL: amqp://guest:guest@rabbitmq
+          CACHE_URL: redis://${{ github.server_url != 'https://github.com' && 'redis' || 'localhost' }}
+          BUS_URL: amqp://guest:guest@${{ github.server_url != 'https://github.com' && 'rabbitmq' || 'localhost' }}
         run: python -m unittest tests/**/${{ matrix.test }}*.py
