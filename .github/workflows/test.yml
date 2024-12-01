@@ -4,6 +4,10 @@ on:
 
 jobs:
   unittest:
+
+    env:
+      RUNNER_TOOL_CACHE: /toolcache
+
     runs-on: ubuntu-latest
 
     strategy:
@@ -20,7 +24,7 @@ jobs:
           RABBITMQ_DEFAULT_USER: guest
           RABBITMQ_DEFAULT_PASS: guest
         ports:
-          - 5672/tcp
+          - 5672:5672
 
       redis:
         image: redis
@@ -30,7 +34,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
         ports:
-          - 6379/tcp
+          - 6379:6379
 
     steps:
       - if: github.server_url != 'https://github.com'
