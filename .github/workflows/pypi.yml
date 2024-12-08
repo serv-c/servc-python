@@ -1,16 +1,16 @@
-name: 'Package Publish'
-on: 
+name: 'Publish'
+on:
   push:
   pull_request:
 
-jobs: 
-  packagepublish:
+jobs:
+  version:
     runs-on: ubuntu-latest
+
     steps:
       - name: Check out code
         uses: actions/checkout@v4
         with:
-          submodules: true
           fetch-depth: 100
 
       - name: Use Node.js
@@ -54,7 +54,39 @@ jobs:
           skip-ci: false
           skip-tag: ${{ github.ref_name != 'main' }}
           fallback-version: ${{ steps.previoustagold.outputs.tag }}
-      
+
+  codepublish:
+    runs-on: ubuntu-latest
+    needs: version
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Install git
+        if: github.ref_name == 'main' && github.server_url != 'https://github.com'
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.GIT_SERVC_TOKEN }}
+          URL: github.com/${{ github.repository }}.git
+        run: |
+          sudo apt-get install -y git
+          git checkout main
+          git push https://drgroot:${TOKEN}@${URL} main
+          git push https://drgroot:${TOKEN}@${URL} --tags
+
+  packagepublish:
+    runs-on: ubuntu-latest
+    needs: version
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 100
+
       - name: "Get Previous tag"
         id: previoustag
         uses: "WyriHaximus/github-action-get-previous-tag@v1"
