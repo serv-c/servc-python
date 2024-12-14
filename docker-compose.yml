@@ -5,11 +5,8 @@ services:
     image: mcr.microsoft.com/vscode/devcontainers/python
     volumes:
       - .:/workspace:cached
-      - ../docs:/workspace/servc-docs
-      - /Users/yusuf/Documents/bin/format:/usr/local/bin/format
     command: sleep infinity
     environment:
-      START_SCRIPT: /workspace/main.py
       CACHE_URL: redis://redis:6379/0
       BUS_URL: amqp://rabbitmq:rabbitmq@rabbitmq/
     links:
