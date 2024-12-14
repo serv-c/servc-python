@@ -44,7 +44,7 @@ jobs:
       - name: Conventional Changelog Action
         id: changelog
         if: github.ref_name == 'main'
-        uses: TriPSs/conventional-changelog-action@v3
+        uses: TriPSs/conventional-changelog-action@v6
         with:
           github-token: ${{ github.token }}
           git-url: ${{ github.server_url != 'https://github.com' && 'git.yusufali.ca' || 'github.com' }}
