@@ -15,7 +15,7 @@ jobs:
 
     services:
       rabbitmq:
-        image: rabbitmq:3
+        image: rabbitmq
         env:
           RABBITMQ_DEFAULT_USER: guest
           RABBITMQ_DEFAULT_PASS: guest
@@ -44,12 +44,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Type check
-        run: |
-          pip install mypy
-          pip install types-PyYAML types-simplejson types-redis
-          mypy servc
-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -60,6 +54,12 @@ jobs:
             echo "  tests/*" >> .coveragerc
             echo "  worker.py" >> .coveragerc
           fi
+
+      - name: Type check
+        run: |
+          pip install mypy
+          pip install types-PyYAML types-simplejson types-redis
+          mypy servc
 
       - name: Run tests
         env:
