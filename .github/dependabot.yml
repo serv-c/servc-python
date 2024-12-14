@@ -1,10 +1,20 @@
 version: 2
 updates:
+  - package-ecosystem: docker
+    commit-message:
+      prefix: fix
+    directory: /
+    schedule:
+      interval: weekly
+
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
       interval: "daily"
+
   - package-ecosystem: "pip"
+    commit-message:
+      prefix: fix
     directory: "/"
     schedule:
       interval: "daily"
