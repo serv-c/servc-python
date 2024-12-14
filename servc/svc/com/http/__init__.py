@@ -170,7 +170,7 @@ class HTTPInterface(Middleware):
             else:
                 return "bad request", StatusCode.INVALID_INPUTS.value
 
-        return "Content-Type not supported"
+        return f"Content-Type: {content_type} not supported"
 
     def _getInformation(self):
         return jsonify(self._info)
