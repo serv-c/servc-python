@@ -1,6 +1,6 @@
 ARG PYTHON_VERSION=3.13
 
-FROM python:${PYTHON_VERSION}-slim AS builder-image
+FROM python:${PYTHON_VERSION}-alpine AS builder-image
 ARG DEBIAN_FRONTEND=noninteractive
 ARG WORKDIR=/usr/src/
 
@@ -10,7 +10,7 @@ ENV PATH="${WORKDIR}/venv/bin:$PATH"
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-FROM python:${PYTHON_VERSION}-slim AS app
+FROM python:${PYTHON_VERSION}-alpine AS app
 ARG DEBIAN_FRONTEND=noninteractive
 ARG WORKDIR=/usr/src/
 
