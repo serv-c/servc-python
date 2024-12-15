@@ -155,7 +155,7 @@ class WorkerComponent(Middleware):
                 return StatusCode.NO_PROCESSING
 
             if message["argumentId"] in ["raw", "plain"] and message["inputs"]:
-                artifact = message["inputs"]
+                artifact = message["argument"]
             else:
                 artifact = cache.getKey(message["argumentId"])
             if artifact is None or "method" not in artifact or "inputs" not in artifact:
