@@ -2,9 +2,10 @@
 
 Serv-C implmentation for Python. Documentation can be found https://docs.servc.io
 
-[![PyPI version](https://badge.fury.io/py/servc.svg)](https://badge.fury.io/py/servc)
-![Serv-C](https://github.com/serv-c/servc-python/actions/workflows/servc.yml/badge.svg)
-![Docker Pulls](https://img.shields.io/docker/pulls/yusufali/servc)
+[![PyPI version](https://badge.fury.io/py/servc.svg)](https://pypi.org/project/servc/)
+[![Serv-C](https://github.com/serv-c/servc-python/actions/workflows/servc.yml/badge.svg)](https://docs.servc.io)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/servc)](https://pypi.org/project/servc/)
+[![Docker Pulls](https://img.shields.io/docker/pulls/yusufali/servc)](https://registry.hub.docker.com/r/yusufali/servc)
 
 ## Example
 
