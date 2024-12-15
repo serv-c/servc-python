@@ -52,7 +52,9 @@ class BusRabbitMQ(BusComponent):
     def isBlockingConnection(self) -> bool:
         return isinstance(self._conn, BlockingConnection)
 
-    def _connect(self, method=None | Callable, args=None | Tuple, blocking=True):
+    def _connect(
+        self, method: None | Callable = None, args: None | Tuple = None, blocking=True
+    ):
         if not self.isOpen:
             if blocking:
                 self._conn = BlockingConnection(pika.URLParameters(self._url))
