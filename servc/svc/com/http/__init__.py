@@ -127,6 +127,10 @@ class HTTPInterface(Middleware):
         if content_type == "application/json":
             body = request.json
 
+            # compatibility patch
+            if "inputs" in body and "argument" not in body:
+                body["argument"] = body["inputs"]
+
             must_have_keys = ("type",)
             for key in must_have_keys:
                 if key not in body:
