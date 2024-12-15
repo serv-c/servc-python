@@ -58,6 +58,8 @@ class Middleware:
         return self._type
 
     def connect(self):
+        for child in self._children:
+            child.connect()
         return self._connect()
 
     def close(self):
