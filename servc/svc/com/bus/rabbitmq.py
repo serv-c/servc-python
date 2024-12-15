@@ -90,8 +90,19 @@ class BusRabbitMQ(BusComponent):
             self._connect(method, args)
         elif method and args and self._conn:
             if self.isBlockingConnection():
-                channel = self._conn.channel()
-                return on_channel_open(channel, method, args)
+
+                try:
+                    channel = self._conn.channel()
+                    return on_channel_open(channel, method, args)
+
+                # if the connection is lost, we will retry
+                # this often happens for connections that are
+                # left idle for a long time
+                except pika.exceptions.StreamLostError as e:
+                    print(str(e), flush=True)
+                    self._conn = None
+                    return self.get_channel(method, args)
+
             else:
                 self._conn.channel(
                     on_open_callback=lambda c: on_channel_open(c, method, args)
