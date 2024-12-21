@@ -71,18 +71,18 @@ def evaluate_part_pre_hook(
                 continue
             inputs = (
                 hook["inputs"]
-                if "inputs" in hook and isinstance(hook["inputs"], dict)
-                else {}
+                if "inputs" in hook
+                else {
+                    "id": message["id"],
+                    "method": artifact["method"],
+                    "inputs": artifact["inputs"],
+                }
             )
             newHook: OnCompleteHook = {
                 "type": hook["type"],
                 "route": hook["route"],
                 "method": hook["method"],
-                "inputs": {
-                    "id": inputs.get("id", message["id"]),
-                    "method": inputs.get("method", method),
-                    "inputs": inputs.get("inputs", artifact["inputs"]),
-                },
+                "inputs": inputs,
             }
             complete_hook.append(newHook)
 
@@ -92,7 +92,7 @@ def evaluate_part_pre_hook(
 
     # publish messages to part queue
     payload_template: InputPayload = {
-        "id": "",
+        "id": message["id"],
         "type": InputType.INPUT.value,
         "route": route,
         "force": True,
@@ -101,12 +101,13 @@ def evaluate_part_pre_hook(
             "method": method,
             "inputs": {},
             "hooks": {
+                **hooks,
+                "on_complete": complete_hook,
                 "part": {
                     "part_id": 0,
                     "total_parts": len(jobs),
                     "part_queue": task_queue,
                 },
-                "on_complete": complete_hook,
             },
         },
     }

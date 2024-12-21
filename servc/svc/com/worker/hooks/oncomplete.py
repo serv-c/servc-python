@@ -13,8 +13,14 @@ def process_complete_hook(
     artifact: ArgumentArtifact,
     hook: OnCompleteHook,
 ) -> bool:
-    input = (
-        hook["inputs"] if "inputs" in hook and isinstance(hook["inputs"], dict) else {}
+    inputs = (
+        hook["inputs"]
+        if "inputs" in hook
+        else {
+            "id": message["id"],
+            "method": artifact["method"],
+            "inputs": artifact["inputs"],
+        }
     )
 
     payload: InputPayload = {
@@ -25,11 +31,7 @@ def process_complete_hook(
         "argumentId": "",
         "argument": {
             "method": hook["method"],
-            "inputs": {
-                "id": input.get("id", message["id"]),
-                "method": input.get("method", artifact["method"]),
-                "inputs": input.get("inputs", artifact["inputs"]),
-            },
+            "inputs": inputs,
         },
     }
     sendMessage(payload, bus, cache, idGenerator)
