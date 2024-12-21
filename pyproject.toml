@@ -17,9 +17,14 @@ classifiers = [
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools.package-data]
+"servc" = ["py.typed"]
+
 [project.urls]
 "Homepage" = "https://github.com/serv-c/servc-python"
 "Bug Tracker" = "https://github.com/serv-c/servc-python/issues"
+Repository = "https://github.com/serv-c/servc-python.git"
+Documentation = "https://docs.servc.io/"
 
 [tool.semantic_release]
 assets = []
