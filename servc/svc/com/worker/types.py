@@ -7,9 +7,11 @@ from servc.svc.io.output import StatusCode
 
 EMIT_EVENT = Callable[[str, Any], None]
 
+RESOLVER_RETURN_TYPE = Union[StatusCode, Any, None]
+
 RESOLVER = Callable[
     [str, BusComponent, CacheComponent, Any, List[Middleware], EMIT_EVENT],
-    Union[StatusCode, Any, None],
+    RESOLVER_RETURN_TYPE,
 ]
 
 RESOLVER_MAPPING = Dict[str, RESOLVER]

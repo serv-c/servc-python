@@ -18,3 +18,35 @@ class ResponseArtifact(TypedDict):
     progress: float
     responseBody: Any
     isError: bool
+
+
+class NotAuthorizedException(Exception):
+    def __init__(self, message: str = "Not authorized"):
+        self.message = message
+
+    def __str__(self):
+        return self.message
+
+
+class InvalidInputsException(Exception):
+    def __init__(self, message: str = "Invalid inputs"):
+        self.message = message
+
+    def __str__(self):
+        return self.message
+
+
+class NoProcessingException(Exception):
+    def __init__(self, message: str = "No processing"):
+        self.message = message
+
+    def __str__(self):
+        return self.message
+
+
+class MethodNotFoundException(Exception):
+    def __init__(self, message: str = "Method not found"):
+        self.message = message
+
+    def __str__(self):
+        return self.message

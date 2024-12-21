@@ -7,7 +7,13 @@ from servc.svc.com.worker.hooks import evaluate_post_hooks, evaluate_pre_hooks
 from servc.svc.com.worker.types import EMIT_EVENT, RESOLVER_MAPPING
 from servc.svc.config import Config
 from servc.svc.io.input import InputType
-from servc.svc.io.output import StatusCode
+from servc.svc.io.output import (
+    InvalidInputsException,
+    MethodNotFoundException,
+    NoProcessingException,
+    NotAuthorizedException,
+    StatusCode,
+)
 from servc.svc.io.response import getAnswerArtifact, getErrorArtifact
 
 
@@ -201,6 +207,28 @@ class WorkerComponent(Middleware):
                     emitEvent,
                 )
                 cache.setKey(message["id"], getAnswerArtifact(message["id"], response))
+            except NotAuthorizedException as e:
+                cache.setKey(
+                    message["id"],
+                    getErrorArtifact(message["id"], str(e), StatusCode.NOT_AUTHORIZED),
+                )
+                statusCode = StatusCode.NOT_AUTHORIZED
+            except InvalidInputsException as e:
+                cache.setKey(
+                    message["id"],
+                    getErrorArtifact(message["id"], str(e), StatusCode.INVALID_INPUTS),
+                )
+                statusCode = StatusCode.INVALID_INPUTS
+            except NoProcessingException:
+                return StatusCode.NO_PROCESSING
+            except MethodNotFoundException as e:
+                cache.setKey(
+                    message["id"],
+                    getErrorArtifact(
+                        message["id"], str(e), StatusCode.METHOD_NOT_FOUND
+                    ),
+                )
+                statusCode = StatusCode.METHOD_NOT_FOUND
             except Exception as e:
                 cache.setKey(
                     message["id"],
