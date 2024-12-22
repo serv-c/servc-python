@@ -21,8 +21,7 @@ mytable: LakeTable = {
     "medallion": Medallion.BRONZE,
     "schema": Schema(
         types.NestedField(field_id=1, name="date", type=types.StringType()),
-        types.NestedField(field_id=2, name="some_int",
-                          type=types.IntegerType()),
+        types.NestedField(field_id=2, name="some_int", type=types.IntegerType()),
     ),
 }
 
@@ -66,7 +65,7 @@ class TestLakeIceberg(unittest.TestCase):
         data = self.iceberg.read(["date"]).to_pylist()
         self.assertEqual(len(data), 3)
 
-        self.iceberg.overwrite([], [["date", ["2021-01-02"]]])
+        self.iceberg.overwrite([], {"date": ["2021-01-02"]})
         data = self.iceberg.read(["date"]).to_pylist()
         self.assertEqual(len(data), 1)
 
@@ -77,17 +76,17 @@ class TestLakeIceberg(unittest.TestCase):
         self.iceberg.insert([{"date": "2021-01-02", "some_int": 3}])
 
         data = self.iceberg.read(
-            ["date"], partitions=[["date", ["2021-01-01"]]]
+            ["date"], partitions={"date": ["2021-01-01"]}
         ).to_pylist()
         self.assertEqual(len(data), 1)
 
         data = self.iceberg.read(
-            ["date"], partitions=[["date", ["2021-01-02"]]]
+            ["date"], partitions={"date": ["2021-01-02"]}
         ).to_pylist()
         self.assertEqual(len(data), 2)
 
         data = self.iceberg.read(
-            ["date"], partitions=[["date", ["2021-01-02", "2021-01-01"]]]
+            ["date"], partitions={"date": ["2021-01-02", "2021-01-01"]}
         ).to_pylist()
         self.assertEqual(len(data), 3)
 
@@ -99,14 +98,14 @@ class TestLakeIceberg(unittest.TestCase):
 
         data = self.iceberg.read(
             ["date"],
-            partitions=[["date", ["2021-01-02"]]],
+            partitions={"date": ["2021-01-02"]},
             options={"row_filter": EqualTo("some_int", 3)},
         ).to_pylist()
         self.assertEqual(len(data), 1)
 
         data = self.iceberg.read(
             ["date"],
-            partitions=[["date", ["2021-01-02"]], ["some_int", [3]]],
+            partitions={"date": ["2021-01-02"], "some_int": [3]},
         ).to_pylist()
         self.assertEqual(len(data), 1)
 
