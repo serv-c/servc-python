@@ -130,12 +130,22 @@ class IceBerg(Lake):
         if self._ice is None:
             raise Exception("Table not connected")
 
+        df = pa.Table.from_pylist(data, self.getSchema())
         if partitions is None or len(partitions) == 0:
-            self._ice.overwrite(pa.Table.from_pylist(data, self.getSchema()))
+            self._ice.overwrite(df)
             return True
-        for partition, values in partitions:  # type: ignore
-            self._ice.delete(In(partition, values))  # type: ignore
-        return self.insert(data)
+
+        # when partitions are provided, we need to filter the data
+        boolPartition: List[BooleanExpression] = []
+        for partition, values in partitions.items():
+            boolPartition.append(In(partition, values))
+        right_side = boolPartition[0]
+        if len(boolPartition) > 1:
+            for i in range(1, len(boolPartition)):
+                right_side = And(right_side, boolPartition[i])
+
+        self._ice.overwrite(df, overwrite_filter=right_side)
+        return True
 
     def readRaw(
         self,
@@ -151,8 +161,8 @@ class IceBerg(Lake):
             options = {}
         if partitions is not None:
             boolPartition: List[BooleanExpression] = []
-            for partition, values in partitions:  # type: ignore
-                boolPartition.append(In(partition, values))  # type: ignore
+            for partition, values in partitions.items():
+                boolPartition.append(In(partition, values))
             right_side = boolPartition[0]
             if len(boolPartition) > 1:
                 for i in range(1, len(boolPartition)):
