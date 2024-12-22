@@ -9,5 +9,6 @@
           "ms-python.python"
         ]
       }
-    }
+    },
+    "postCreateCommand": "pip install -r /workspace/requirements.txt"
   }

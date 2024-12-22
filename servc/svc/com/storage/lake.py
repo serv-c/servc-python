@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Any, Dict, List, NotRequired, TypedDict
 
-from pyarrow import Schema  # type: ignore
+from pyarrow import RecordBatchReader, Schema, Table
 
 from servc.svc.com.storage import StorageComponent
 
@@ -69,20 +69,29 @@ class Lake(StorageComponent):
     ) -> bool:
         return False
 
+    def readRaw(
+        self,
+        columns: List[str],
+        partitions: Dict[str, List[Any]] | None = None,
+        version: str | None = None,
+        options: Any | None = None,
+    ) -> Any:
+        return None
+
+    def readBatch(
+        self,
+        columns: List[str],
+        partitions: Dict[str, List[Any]] | None = None,
+        version: str | None = None,
+        options: Any | None = None,
+    ) -> RecordBatchReader:
+        return None  # type: ignore
+
     def read(
         self,
         columns: List[str],
         partitions: Dict[str, List[Any]] | None = None,
         version: str | None = None,
         options: Any | None = None,
-        raw: bool = False,
-        batch: bool = False,
-        data: Any | None = None,
-    ) -> Any | None:
-        if data:
-            if raw:
-                return data
-            elif batch:
-                return data.to_arrow_batch_reader()
-            return data.to_arrow()
-        return None
+    ) -> Table:
+        return None  # type: ignore

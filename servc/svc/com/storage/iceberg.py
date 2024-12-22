@@ -1,12 +1,12 @@
 from typing import Any, Dict, List
 
-import pyarrow as pa  # type: ignore
-from pyarrow import Schema
+import pyarrow as pa
+from pyarrow import Schema, RecordBatchReader
 from pyarrow import Table as paTable
 from pyiceberg.catalog import Catalog, load_catalog
 from pyiceberg.expressions import AlwaysTrue, And, BooleanExpression, In
 from pyiceberg.partitioning import PartitionField, PartitionSpec
-from pyiceberg.table import Table
+from pyiceberg.table import DataScan, Table
 from pyiceberg.table.sorting import UNSORTED_SORT_ORDER
 from pyiceberg.transforms import IdentityTransform
 from pyiceberg.types import NestedField
@@ -137,16 +137,13 @@ class IceBerg(Lake):
             self._ice.delete(In(partition, values))  # type: ignore
         return self.insert(data)
 
-    def read(
+    def readRaw(
         self,
         columns: List[str],
         partitions: Dict[str, List[Any]] | None = None,
         version: str | None = None,
         options: Any | None = None,
-        raw: bool = False,
-        batch: bool = False,
-        data: Any | None = None,
-    ) -> Any | None:
+    ) -> DataScan:
         if self._ice is None:
             raise Exception("Table not connected")
 
@@ -164,10 +161,29 @@ class IceBerg(Lake):
                 options.get("row_filter", AlwaysTrue()), right_side
             )
 
-        scan = self._ice.scan(
+        return self._ice.scan(
             row_filter=options.get("row_filter", AlwaysTrue()),
             selected_fields=tuple(columns),
             limit=options.get("limit", None),
             snapshot_id=int(version) if version is not None else None,
         )
-        return super().read(columns, partitions, version, options, raw, batch, scan)
+
+    def readBatch(
+        self,
+        columns: List[str],
+        partitions: Dict[str, List[Any]] | None = None,
+        version: str | None = None,
+        options: Any | None = None,
+    ) -> RecordBatchReader:
+        data = self.readRaw(columns, partitions, version, options)
+        return data.to_arrow_batch_reader()
+
+    def read(
+        self,
+        columns: List[str],
+        partitions: Dict[str, List[Any]] | None = None,
+        version: str | None = None,
+        options: Any | None = None,
+    ) -> paTable:
+        data = self.readRaw(columns, partitions, version, options)
+        return data.to_arrow()

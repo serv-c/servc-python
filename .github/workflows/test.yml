@@ -57,7 +57,7 @@ jobs:
       - name: Type check
         run: |
           pip install mypy
-          pip install types-PyYAML types-simplejson types-redis
+          pip install types-PyYAML types-simplejson types-redis pyarrow-stubs
           mypy servc
 
       - name: Run tests
