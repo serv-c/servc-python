@@ -1,7 +1,7 @@
 from typing import Any, Dict, List
 
 import pyarrow as pa
-from pyarrow import Schema, RecordBatchReader
+from pyarrow import RecordBatchReader, Schema
 from pyarrow import Table as paTable
 from pyiceberg.catalog import Catalog, load_catalog
 from pyiceberg.expressions import AlwaysTrue, And, BooleanExpression, In

@@ -25,7 +25,7 @@ def process_post_part_hook(
         "force": True,
         "argumentId": "",
         "argument": {
-            "method": partHook["part_id"],
+            "method": str(partHook["part_id"]),
             "inputs": {
                 "id": message["id"],
                 "method": artifact["method"],

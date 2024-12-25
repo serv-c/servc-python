@@ -1,0 +1,9 @@
+pyarrow-stubs
+types-PyYAML
+mypy
+coverage
+types-simplejson
+types-redis
+pyiceberg[sql-sqlite,pyarrow]==0.8.1
+build
+twine

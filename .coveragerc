@@ -1,4 +1,3 @@
 [run]
 omit = 
   tests/*
-  servc/svc/com/worker/__init__.py

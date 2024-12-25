@@ -47,18 +47,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          if [ ! -f .coveragerc ]; then
-            echo "[run]" >> .coveragerc
-            echo "omit =" >> .coveragerc
-            echo "  tests/*" >> .coveragerc
-            echo "  worker.py" >> .coveragerc
-          fi
+          pip install -r requirements-dev.txt
 
       - name: Type check
-        run: |
-          pip install mypy
-          pip install types-PyYAML types-simplejson types-redis pyarrow-stubs
-          mypy servc
+        run: mypy servc
 
       - name: Run tests
         env:

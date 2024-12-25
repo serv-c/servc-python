@@ -16,7 +16,7 @@ class OnCompleteHook(TypedDict):
     type: CompleteHookType
     route: str
     method: str
-    inputs: NotRequired[CompleteHookArgument]
+    inputs: NotRequired[CompleteHookArgument | Any]
 
 
 class PartHook(TypedDict):
