@@ -6,6 +6,9 @@ on:
 env:
   SERVC_VERSION: 0.4.2
 
+permissions:
+  contents: write
+
 jobs:
   servc:
     runs-on: ubuntu-latest
@@ -87,3 +90,28 @@ jobs:
           CACHE_URL: redis://${{ github.server_url != 'https://github.com' && 'redis' || 'localhost' }}
           BUS_URL: amqp://guest:guest@${{ github.server_url != 'https://github.com' && 'rabbitmq' || 'localhost' }}
         run: python -m unittest tests/${{ matrix.test }}*.py
+
+  badgepublish:
+    runs-on: ubuntu-latest
+    # if: github.ref_name == 'main'
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          repository: serv-c/docs
+          fetch-depth: 100
+          fetch-tags: true
+
+      - name: "Get Tag"
+        id: spectag
+        uses: "WyriHaximus/github-action-get-previous-tag@v1"
+
+      - name: Create Version Badge
+        uses: RubbaBoy/BYOB@v1.3.0
+        with:
+          NAME: servc-version
+          LABEL: 'Spec Compliant'
+          STATUS: ${{ env.SERVC_VERSION }}
+          COLOR: ${{ steps.spectag.outputs.tag == env.SERVC_VERSION && '66ff00' || 'orange' }}
+          GITHUB_TOKEN: ${{ github.token }}
