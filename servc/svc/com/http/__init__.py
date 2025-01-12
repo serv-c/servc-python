@@ -1,6 +1,6 @@
 import os
 from multiprocessing import Process
-from typing import Dict, Tuple, TypedDict
+from typing import Dict, List, Tuple, TypedDict
 
 from flask import Flask, jsonify, request  # type: ignore
 
@@ -9,6 +9,7 @@ from servc.svc.client.send import sendMessage
 from servc.svc.com.bus import BusComponent
 from servc.svc.com.cache import CacheComponent
 from servc.svc.com.worker import RESOLVER_MAPPING
+from servc.svc.config import Config
 from servc.svc.idgen.simple import simple
 from servc.svc.io.input import InputPayload, InputType
 from servc.svc.io.output import StatusCode
@@ -29,6 +30,8 @@ def methodGrabber(m: RESOLVER_MAPPING) -> Dict[str, Tuple[str, ...]]:
 
 
 class HTTPInterface(Middleware):
+    name: str = "http"
+
     _type: ComponentType = ComponentType.INTERFACE
 
     _port: int
@@ -41,39 +44,30 @@ class HTTPInterface(Middleware):
 
     _consumer: Process
 
-    _route: str
-
-    _instanceId: str
-
     _info: ServiceInformation
 
     def __init__(
         self,
-        port: int,
+        config: Config,
         bus: BusComponent,
         cache: CacheComponent,
-        route: str,
-        instanceId: str,
         consumerthread: Process,
         resolvers: RESOLVER_MAPPING,
         eventResolvers: RESOLVER_MAPPING,
     ):
-        super().__init__()
-        self._port = port
+        super().__init__(config)
+        self._port = int(config.get("port"))
         self._server = Flask(__name__)
 
         self._bus = bus
         self._cache = cache
         self._children.append(self._bus)
         self._children.append(self._cache)
-
-        self._route = route
-        self._instanceId = instanceId
         self._consumer = consumerthread
 
         self._info = {
-            "instanceId": self._instanceId,
-            "queue": self._bus.getRoute(self._route),
+            "instanceId": self._bus.instanceId,
+            "queue": self._bus.route,
             "methods": methodGrabber(resolvers),
             "eventHandlers": methodGrabber(eventResolvers),
         }
@@ -106,6 +100,8 @@ class HTTPInterface(Middleware):
         except AssertionError:
             pid = self._consumer.pid
             try:
+                if not pid:
+                    raise Exception("No PID")
                 os.kill(pid, 0)
             except OSError:
                 consumerAlive = False
@@ -126,29 +122,28 @@ class HTTPInterface(Middleware):
             return self._getInformation()
         if content_type == "application/json":
             body = request.json
+            if not body:
+                return "bad request", StatusCode.INVALID_INPUTS.value
 
             # compatibility patch
-            if "inputs" in body and "argument" not in body:
+            if "inputs" in body and "argument" not in body and body["inputs"]:
                 body["argument"] = body["inputs"]
 
-            must_have_keys = ("type",)
+            must_have_keys: List[str] = ["type"]
             for key in must_have_keys:
                 if key not in body:
                     return f"missing key {key}", StatusCode.INVALID_INPUTS.value
 
             if body["type"] == InputType.EVENT.value:
-                must_have_keys = ("event", "details")
+                must_have_keys = ["event", "details"]
                 for key in must_have_keys:
                     if key not in body:
                         return f"missing key {key}", StatusCode.INVALID_INPUTS.value
-                instanceId = (
-                    body["instanceId"] if "instanceId" in body else self._instanceId
-                )
 
-                id = self._bus.emitEvent(body["event"], instanceId, body["details"])
+                id = self._bus.emitEvent(body["event"], body["details"])
                 return id
             elif body["type"] == InputType.INPUT.value:
-                must_have_keys = ("route", "argument")
+                must_have_keys = ["route", "argument"]
                 for key in must_have_keys:
                     if key not in body:
                         return f"missing key {key}", StatusCode.INVALID_INPUTS.value
@@ -161,16 +156,16 @@ class HTTPInterface(Middleware):
                 }
                 if "instanceId" in body:
                     payload["instanceId"] = body["instanceId"]
+                force: bool = True if "force" in body and body["force"] else False
 
-                id = sendMessage(
+                res_id = sendMessage(
                     payload,
                     self._bus,
                     self._cache,
                     simple,
-                    True if "force" in body and body["force"] else False,
-                    [],
+                    force=force,
                 )
-                return id
+                return res_id
             else:
                 return "bad request", StatusCode.INVALID_INPUTS.value
 

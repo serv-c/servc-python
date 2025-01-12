@@ -34,8 +34,8 @@ art: ArgumentArtifact = {
 partHook: PartHook = art["hooks"]["part"]
 
 testMapping: RESOLVER_MAPPING = {
-    "mymethod": lambda _m, _b, _c, p, *y: len(p),
-    "mymethod_part": lambda _m, _b, _c, p, *y: [x for x in p],
+    "mymethod": lambda _m, p, _c: len(p),
+    "mymethod_part": lambda _m, p, _c: [x for x in p],
     "myothermethod": lambda *z: 1,
 }
 
@@ -46,8 +46,14 @@ class TestParallelize(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         config = Config()
-        cls.bus = BusRabbitMQ(config.get("conf.bus.url"), {}, "")
-        cls.cache = CacheRedis(config.get("conf.cache.url"))
+        cls.bus = BusRabbitMQ(config.get("conf.bus"))
+        cls.cache = CacheRedis(config.get("conf.cache"))
+        cls.context = {
+            "bus": cls.bus,
+            "cache": cls.cache,
+            "middlewares": [],
+            "config": config,
+        }
 
         params = pika.URLParameters(config.get("conf.bus.url"))
         cls.conn = pika.BlockingConnection(params)
@@ -69,14 +75,14 @@ class TestParallelize(unittest.TestCase):
         self.assertFalse(res)
 
     def test_existing_part_queue(self):
-        self.bus.create_queue("test_part")
+        self.bus.create_queue("test_part", False)
         self.bus.publishMessage("test_part", "test")
 
         res = process_post_part_hook(self.bus, self.cache, message, art, partHook)
         self.assertTrue(res)
 
     def test_greater_than_total_parts(self):
-        self.bus.create_queue("test_part")
+        self.bus.create_queue("test_part", False)
         self.bus.publishMessage("test_part", "test")
         self.bus.publishMessage("test_part", "test")
 
@@ -85,46 +91,44 @@ class TestParallelize(unittest.TestCase):
 
     def test_pre_hook_method_check(self):
         # continue because there is no part method
-        res = evaluate_part_pre_hook(
-            "test", testMapping, self.bus, self.cache, message, art, [], emit
-        )
+        self.bus._route = "test"
+        res = evaluate_part_pre_hook(testMapping, message, art, self.context)
         self.assertTrue(res)
 
     def test_check_w_part_method(self):
+        self.bus._route = "test"
         art2 = json.loads(json.dumps(art))
         art2["method"] = "mymethod"
         del art2["hooks"]["part"]
 
         # not because there is a part method
-        res = evaluate_part_pre_hook(
-            "test", testMapping, self.bus, self.cache, message, art2, [], emit
-        )
+        res = evaluate_part_pre_hook(testMapping, message, art2, self.context)
         self.assertFalse(res)
 
     def test_check_w_part_method_and_hook(self):
+        self.bus._route = "test"
         # true because the hook exists already
-        res = evaluate_part_pre_hook(
-            "test", testMapping, self.bus, self.cache, message, art, [], emit
-        )
+        res = evaluate_part_pre_hook(testMapping, message, art, self.context)
         self.assertTrue(res)
 
     def test_non_list_partifier(self):
+        self.bus._route = "test"
         art2 = json.loads(json.dumps(art))
         art2["method"] = "mymethod"
         del art2["hooks"]["part"]
         new_mapping: RESOLVER_MAPPING = {
-            "mymethod": lambda _m, _b, _c, p, *y: len(p),
-            "mymethod_part": lambda _m, _b, _c, p, *y: len(p),
+            "mymethod": lambda _m, p, _c: len(p),
+            "mymethod_part": lambda _m, p, _c: len(p),
             "myothermethod": lambda *z: 1,
         }
 
         # true because resolver did not return a list
-        res = evaluate_part_pre_hook(
-            "test", new_mapping, self.bus, self.cache, message, art2, [], emit
-        )
+        res = evaluate_part_pre_hook(new_mapping, message, art2, self.context)
         self.assertTrue(res)
 
     def test_w_on_complete_hook(self):
+        self.bus._route = "test"
+
         art2 = json.loads(json.dumps(art))
         art2["method"] = "mymethod"
         del art2["hooks"]["part"]
@@ -132,9 +136,7 @@ class TestParallelize(unittest.TestCase):
             {"type": "test", "route": "test", "method": "test"}
         ]
 
-        res = evaluate_part_pre_hook(
-            "test", testMapping, self.bus, self.cache, message, art2, [], emit
-        )
+        res = evaluate_part_pre_hook(testMapping, message, art2, self.context)
         self.assertFalse(res)
 
 

@@ -4,7 +4,7 @@ from servc.svc import ComponentType, Middleware
 from servc.svc.com.bus import BusComponent, OnConsuming
 from servc.svc.com.cache import CacheComponent
 from servc.svc.com.worker.hooks import evaluate_post_hooks, evaluate_pre_hooks
-from servc.svc.com.worker.types import EMIT_EVENT, RESOLVER_MAPPING
+from servc.svc.com.worker.types import RESOLVER_CONTEXT, RESOLVER_MAPPING
 from servc.svc.config import Config
 from servc.svc.io.input import InputType
 from servc.svc.io.output import (
@@ -17,21 +17,17 @@ from servc.svc.io.output import (
 from servc.svc.io.response import getAnswerArtifact, getErrorArtifact
 
 
-def HEALTHZ(
-    _id: str, bus: BusComponent, cache: CacheComponent, _any: Any, c: List[Middleware]
-) -> StatusCode:
-    for component in [bus, cache, *c]:
+def HEALTHZ(_id: str, _any: Any, c: RESOLVER_CONTEXT) -> StatusCode:
+    for component in [c["bus"], c["cache"], *c["middlewares"]]:
         if not component.isReady:
             return StatusCode.SERVER_ERROR
     return StatusCode.OK
 
 
 class WorkerComponent(Middleware):
+    name: str = "worker"
+
     _type: ComponentType = ComponentType.WORKER
-
-    _route: str
-
-    _instanceId: str
 
     _resolvers: RESOLVER_MAPPING
 
@@ -51,8 +47,6 @@ class WorkerComponent(Middleware):
 
     def __init__(
         self,
-        route: str,
-        instanceId: str,
         resolvers: RESOLVER_MAPPING,
         eventResolvers: RESOLVER_MAPPING,
         onConsuming: OnConsuming,
@@ -62,9 +56,7 @@ class WorkerComponent(Middleware):
         config: Config,
         otherComponents: List[Middleware] = [],
     ):
-        super().__init__()
-        self._route = route
-        self._instanceId = instanceId
+        super().__init__(config)
         self._resolvers = resolvers
         self._eventResolvers = eventResolvers
         self._onConsuming = onConsuming
@@ -73,7 +65,7 @@ class WorkerComponent(Middleware):
         self._cache = cache
         self._config = config
         self._bindToEventExchange = (
-            config.get("conf.bus.bindtoeventexchange")
+            config.get(f"conf.{self.name}.bindtoeventexchange")
             if len(self._eventResolvers.keys()) > 0
             else False
         )
@@ -97,30 +89,30 @@ class WorkerComponent(Middleware):
         super().connect()
 
         print("Consumer now Subscribing", flush=True)
-        print(" Route:", self._route, flush=True)
-        print(" InstanceId:", self._instanceId, flush=True)
+        print(" Route:", self._bus.route, flush=True)
+        print(" InstanceId:", self._bus.instanceId, flush=True)
         print(" Resolvers:", self._resolvers.keys(), flush=True)
         print(" Event Resolvers:", self._eventResolvers.keys(), flush=True)
         print(" Bind to Event Exchange:", self._bindToEventExchange, flush=True)
 
         self._bus.subscribe(
-            self._route,
+            self._bus.route,
             self.inputProcessor,
             self._onConsuming,
             bindEventExchange=self._bindToEventExchange,
         )
 
-    def emitEvent(self, bus: BusComponent, eventName: str, details: Any):
-        bus.emitEvent(eventName, self._instanceId, details)
-
     def inputProcessor(self, message: Any) -> StatusCode:
         bus = self._busClass(
-            self._config.get("conf.bus.url"),
-            self._config.get("conf.bus.routemap"),
-            self._config.get("conf.bus.prefix"),
+            self._config.get(f"conf.{self._bus.name}"),
         )
         cache = self._cache
-        emitEvent: EMIT_EVENT = lambda x, y: self.emitEvent(bus, x, y)
+        context: RESOLVER_CONTEXT = {
+            "bus": bus,
+            "cache": cache,
+            "middlewares": self._children,
+            "config": self._config,
+        }
 
         if "type" not in message or "route" not in message:
             return StatusCode.INVALID_INPUTS
@@ -134,14 +126,7 @@ class WorkerComponent(Middleware):
                 return StatusCode.INVALID_INPUTS
             if message["event"] not in self._eventResolvers:
                 return StatusCode.METHOD_NOT_FOUND
-            self._eventResolvers[message["event"]](
-                "",
-                bus,
-                cache,
-                {**message},
-                self._children,
-                emitEvent,
-            )
+            self._eventResolvers[message["event"]]("", {**message}, context)
             return StatusCode.OK
 
         if message["type"] in [InputType.INPUT.value, InputType.INPUT]:
@@ -157,7 +142,7 @@ class WorkerComponent(Middleware):
                     ),
                 )
                 return StatusCode.INVALID_INPUTS
-            if "instanceId" in message and message["instanceId"] != self._instanceId:
+            if "instanceId" in message and message["instanceId"] != bus.instanceId:
                 return StatusCode.NO_PROCESSING
 
             if message["argumentId"] in ["raw", "plain"] and message["inputs"]:
@@ -184,14 +169,10 @@ class WorkerComponent(Middleware):
                 return StatusCode.METHOD_NOT_FOUND
 
             continueExecution = evaluate_pre_hooks(
-                self._route,
                 self._resolvers,
-                bus,
-                cache,
                 message,
                 artifact,
-                self._children,
-                emitEvent,
+                context,
             )
             if not continueExecution:
                 return StatusCode.OK
@@ -200,11 +181,8 @@ class WorkerComponent(Middleware):
             try:
                 response = self._resolvers[artifact["method"]](
                     message["id"],
-                    bus,
-                    cache,
                     artifact["inputs"],
-                    self._children,
-                    emitEvent,
+                    context,
                 )
                 cache.setKey(message["id"], getAnswerArtifact(message["id"], response))
             except NotAuthorizedException as e:

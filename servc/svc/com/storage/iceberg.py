@@ -12,23 +12,26 @@ from pyiceberg.transforms import IdentityTransform
 from pyiceberg.types import NestedField
 
 from servc.svc.com.storage.lake import Lake, LakeTable
+from servc.svc.config import Config
 
 
 class IceBerg(Lake):
-    # _config
     # _table
     _catalog: Catalog
     _ice: Table | None
 
-    def __init__(self, config: Dict[str, Any] | None, table: LakeTable | str):
+    def __init__(self, config: Config, table: LakeTable | str):
         super().__init__(config, table)
 
-        if not config:
-            raise Exception("Config is required")
+        catalog_name = str(config.get("catalog_name"))
+        catalog_properties_raw = config.get("catalog_properties")
+        if not isinstance(catalog_properties_raw, dict):
+            catalog_properties_raw = {}
+        catalog_properties: Dict = catalog_properties_raw
 
         self._catalog = load_catalog(
-            config.get("catalog_name", None),
-            **{**config.get("catalog_properties", {})},
+            catalog_name,
+            **{**catalog_properties},
         )
         self._ice = None
 
@@ -60,7 +63,7 @@ class IceBerg(Lake):
                 )
             partitionSpec: PartitionSpec = PartitionSpec(*partitions)
 
-            self._catalog.create_namespace_if_not_exists(self._getDatabase())
+            self._catalog.create_namespace_if_not_exists(self._database)
             self._ice = self._catalog.create_table(
                 tableName,
                 self._table["schema"],
@@ -73,7 +76,7 @@ class IceBerg(Lake):
 
         self._isReady = self._table is not None
         self._isOpen = self._table is not None
-        return None
+        return self._table is not None
 
     def _close(self):
         if self._isOpen:
@@ -83,6 +86,8 @@ class IceBerg(Lake):
         return False
 
     def getPartitions(self) -> Dict[str, List[Any]] | None:
+        if not self._isOpen:
+            self._connect()
         if self._ice is None:
             raise Exception("Table not connected")
 
@@ -96,20 +101,27 @@ class IceBerg(Lake):
         return partitions
 
     def getSchema(self) -> Schema | None:
+        if not self._isOpen:
+            self._connect()
         if self._ice is None:
             raise Exception("Table not connected")
 
         return self._ice.schema().as_arrow()
 
     def getCurrentVersion(self) -> str | None:
+        if not self._isOpen:
+            self._connect()
         if self._ice is None:
             raise Exception("Table not connected")
+
         snapshot = self._ice.current_snapshot()
         if snapshot is None:
             return None
         return str(snapshot.snapshot_id)
 
     def getVersions(self) -> List[str] | None:
+        if not self._isOpen:
+            self._connect()
         if self._ice is None:
             raise Exception("Table not connected")
 
@@ -118,6 +130,8 @@ class IceBerg(Lake):
         return [str(x) for x in chunked.to_pylist()]
 
     def insert(self, data: List[Any]) -> bool:
+        if not self._isOpen:
+            self._connect()
         if self._ice is None:
             raise Exception("Table not connected")
 
@@ -127,6 +141,8 @@ class IceBerg(Lake):
     def overwrite(
         self, data: List[Any], partitions: Dict[str, List[Any]] | None = None
     ) -> bool:
+        if not self._isOpen:
+            self._connect()
         if self._ice is None:
             raise Exception("Table not connected")
 
@@ -154,6 +170,8 @@ class IceBerg(Lake):
         version: str | None = None,
         options: Any | None = None,
     ) -> DataScan:
+        if not self._isOpen:
+            self._connect()
         if self._ice is None:
             raise Exception("Table not connected")
 

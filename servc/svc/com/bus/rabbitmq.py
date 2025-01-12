@@ -108,7 +108,7 @@ class BusRabbitMQ(BusComponent):
                     on_open_callback=lambda c: on_channel_open(c, method, args)
                 )
 
-    def create_queue(self, queue: str, bindEventExchange: bool = False, channel: pika.channel.Channel | None = None) -> bool:  # type: ignore
+    def create_queue(self, queue: str, bindEventExchange: bool, channel: pika.channel.Channel | None = None) -> bool:  # type: ignore
         if not self.isReady:
             return self._connect(self.create_queue, (queue, bindEventExchange))
         if not channel:
@@ -180,7 +180,7 @@ class BusRabbitMQ(BusComponent):
         route: str,
         inputProcessor: InputProcessor,
         onConsuming: OnConsuming | None,
-        bindEventExchange: bool = True,
+        bindEventExchange: bool,
         channel: pika.channel.Channel | None = None,
     ) -> bool:
         if not self.isReady:

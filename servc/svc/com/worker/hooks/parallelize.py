@@ -1,10 +1,9 @@
 from typing import List
 
-from servc.svc import Middleware
 from servc.svc.client.send import sendMessage
 from servc.svc.com.bus import BusComponent
 from servc.svc.com.cache import CacheComponent
-from servc.svc.com.worker.types import EMIT_EVENT, RESOLVER_MAPPING
+from servc.svc.com.worker.types import RESOLVER_CONTEXT, RESOLVER_MAPPING
 from servc.svc.idgen.simple import simple as idGenerator
 from servc.svc.io.hooks import Hooks, OnCompleteHook, PartHook
 from servc.svc.io.input import ArgumentArtifact, InputPayload, InputType
@@ -42,23 +41,21 @@ def process_post_part_hook(
 
 
 def evaluate_part_pre_hook(
-    route: str,
     resolvers: RESOLVER_MAPPING,
-    bus: BusComponent,
-    cache: CacheComponent,
     message: InputPayload,
     artifact: ArgumentArtifact,
-    children: List[Middleware],
-    emit: EMIT_EVENT,
+    context: RESOLVER_CONTEXT,
 ) -> bool:
+    bus = context["bus"]
+    cache = context["cache"]
+    route = bus.route
     hooks: Hooks = artifact.get("hooks", {})
     method = artifact["method"]
     part_method = f"{method}_part"
     if part_method not in resolvers:
         return True
 
-    jobs = resolvers[part_method](
-        message["id"], bus, cache, artifact, children, emit)
+    jobs = resolvers[part_method](message["id"], artifact, context)
     if not isinstance(jobs, list):
         print(f"Resolver {part_method} did not return a list")
         return True
@@ -88,7 +85,7 @@ def evaluate_part_pre_hook(
 
     # create task queue
     task_queue = f"part.{route}-{method}-{message['id']}"
-    bus.create_queue(task_queue)
+    bus.create_queue(task_queue, False)
 
     # publish messages to part queue
     payload_template: InputPayload = {

@@ -3,6 +3,8 @@ from __future__ import annotations
 from enum import Enum
 from typing import Callable, List
 
+from servc.svc.config import Config
+
 
 class ComponentType(Enum):
     BUS = "bus"
@@ -16,7 +18,7 @@ class ComponentType(Enum):
 class Middleware:
     _children: List[Middleware]
 
-    _name: str
+    name: str
 
     _isReady: bool
 
@@ -28,14 +30,10 @@ class Middleware:
 
     _close: Callable[..., bool]
 
-    def __init__(self):
+    def __init__(self, _config: Config):
         self._children = []
         self._isReady = False
         self._isOpen = False
-
-    @property
-    def name(self) -> str:
-        return self._name
 
     @property
     def isReady(self) -> bool:

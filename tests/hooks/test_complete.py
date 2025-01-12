@@ -2,13 +2,13 @@ import unittest
 
 import pika
 
-from tests.hooks import get_route_message
 from servc.svc.com.bus.rabbitmq import BusRabbitMQ
 from servc.svc.com.cache.redis import CacheRedis
 from servc.svc.com.worker.hooks.oncomplete import process_complete_hook
 from servc.svc.config import Config
 from servc.svc.io.hooks import CompleteHookType
 from servc.svc.io.input import ArgumentArtifact, InputPayload, InputType
+from tests.hooks import get_route_message
 
 message: InputPayload = {
     "id": "123",
@@ -35,8 +35,8 @@ class TestCompleteHook(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         config = Config()
-        cls.bus = BusRabbitMQ(config.get("conf.bus.url"), {}, "")
-        cls.cache = CacheRedis(config.get("conf.cache.url"))
+        cls.bus = BusRabbitMQ(config.get("conf.bus"))
+        cls.cache = CacheRedis(config.get("conf.cache"))
 
         params = pika.URLParameters(config.get("conf.bus.url"))
         cls.conn = pika.BlockingConnection(params)
@@ -51,14 +51,15 @@ class TestCompleteHook(unittest.TestCase):
         cls.conn.close()
 
     def setUp(self):
-        self.bus.create_queue("random")
+        self.bus.create_queue("random", False)
 
     def tearDown(self):
         self.bus.delete_queue("random")
 
     def test_complete_hook_simple(self):
-        res = process_complete_hook(self.bus, self.cache, message,
-                                    art, art["hooks"]["on_complete"][0])
+        res = process_complete_hook(
+            self.bus, self.cache, message, art, art["hooks"]["on_complete"][0]
+        )
         body, _ = get_route_message(self.channel, self.cache, "random")
 
         self.assertTrue(body["argument"]["inputs"]["inputs"], art["inputs"])
@@ -71,7 +72,7 @@ class TestCompleteHook(unittest.TestCase):
             "route": "random",
             "inputs": True,
         }
-        res = process_complete_hook(self.bus, self.cache, message, art,  hook)
+        res = process_complete_hook(self.bus, self.cache, message, art, hook)
         body, _ = get_route_message(self.channel, self.cache, "random")
 
         self.assertTrue(body["argument"]["inputs"], True)

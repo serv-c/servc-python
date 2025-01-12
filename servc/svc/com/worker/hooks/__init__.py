@@ -1,6 +1,3 @@
-from typing import List
-
-from servc.svc import Middleware
 from servc.svc.com.bus import BusComponent
 from servc.svc.com.cache import CacheComponent
 from servc.svc.com.worker.hooks.oncomplete import process_complete_hook
@@ -8,7 +5,7 @@ from servc.svc.com.worker.hooks.parallelize import (
     evaluate_part_pre_hook,
     process_post_part_hook,
 )
-from servc.svc.com.worker.types import EMIT_EVENT, RESOLVER_MAPPING
+from servc.svc.com.worker.types import RESOLVER_CONTEXT, RESOLVER_MAPPING
 from servc.svc.io.hooks import Hooks, OnCompleteHook, PartHook
 from servc.svc.io.input import ArgumentArtifact, InputPayload
 
@@ -45,14 +42,10 @@ def evaluate_post_hooks(
 
 
 def evaluate_pre_hooks(
-    route: str,
     resolvers: RESOLVER_MAPPING,
-    bus: BusComponent,
-    cache: CacheComponent,
     message: InputPayload,
     artifact: ArgumentArtifact,
-    children: List[Middleware],
-    emit: EMIT_EVENT,
+    context: RESOLVER_CONTEXT,
 ) -> bool:
     hooks: Hooks = {}
     if "hooks" in artifact and isinstance(artifact["hooks"], dict):
@@ -61,9 +54,7 @@ def evaluate_pre_hooks(
         return True
 
     for prehook in (evaluate_part_pre_hook,):
-        continueExecution = prehook(
-            route, resolvers, bus, cache, message, artifact, children, emit
-        )
+        continueExecution = prehook(resolvers, message, artifact, context)
         if not continueExecution:
             return False
 

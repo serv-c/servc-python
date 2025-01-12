@@ -1,6 +1,7 @@
-from typing import Any, Callable, Union
+from typing import Any, Callable, Dict, Union
 
 from servc.svc import ComponentType, Middleware
+from servc.svc.config import Config
 from servc.svc.io.input import EventPayload, InputPayload, InputType
 from servc.svc.io.output import StatusCode
 
@@ -10,20 +11,40 @@ OnConsuming = Union[Callable[[str], None], None]
 
 
 class BusComponent(Middleware):
+    name: str = "bus"
+
     _type: ComponentType = ComponentType.BUS
 
     _url: str
 
-    _routeMap: dict
+    _routeMap: Dict[str, str]
 
     _prefix: str
 
-    def __init__(self, url: str, routeMap: dict, prefix: str):
-        super().__init__()
+    _instanceId: str
 
-        self._url = url
-        self._routeMap = routeMap
-        self._prefix = prefix
+    _route: str
+
+    def __init__(self, config: Config):
+        super().__init__(config)
+
+        self._url = str(config.get("url"))
+        self._prefix = str(config.get("prefix"))
+        self._instanceId = str(config.get("instanceid"))
+        self._route = str(config.get("route"))
+
+        routemap = config.get("routemap")
+        if routemap is None or not isinstance(routemap, dict):
+            routemap = {}
+        self._routeMap = routemap
+
+    @property
+    def instanceId(self) -> str:
+        return self._instanceId
+
+    @property
+    def route(self) -> str:
+        return self._route
 
     def getRoute(self, route: str) -> str:
         if route in self._routeMap:
@@ -33,7 +54,7 @@ class BusComponent(Middleware):
     def publishMessage(self, route: str, message: InputPayload | EventPayload) -> bool:
         return True
 
-    def emitEvent(self, event: str, instanceId: str, details: Any) -> bool:
+    def emitEvent(self, event: str, details: Any) -> bool:
         return self.publishMessage(
             self.getRoute(event),
             {
@@ -41,11 +62,11 @@ class BusComponent(Middleware):
                 "route": self.getRoute(event),
                 "event": event,
                 "details": details,
-                "instanceId": instanceId,
+                "instanceId": self._instanceId,
             },
         )
 
-    def create_queue(self, queue: str, bindEventExchange: bool = True) -> bool:
+    def create_queue(self, queue: str, bindEventExchange: bool) -> bool:
         return False
 
     def delete_queue(self, queue: str) -> bool:
@@ -59,6 +80,6 @@ class BusComponent(Middleware):
         route: str,
         inputProcessor: InputProcessor,
         onConsuming: OnConsuming | None,
-        bindEventExchange: bool = True,
+        bindEventExchange: bool,
     ) -> bool:
         return True

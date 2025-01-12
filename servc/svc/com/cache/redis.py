@@ -7,6 +7,7 @@ import simplejson
 from redis import Redis
 
 from servc.svc.com.cache import CacheComponent
+from servc.svc.config import Config
 
 
 def decimal_default(obj: Any) -> None | str | float:
@@ -19,6 +20,12 @@ def decimal_default(obj: Any) -> None | str | float:
 
 class CacheRedis(CacheComponent):
     _redisClient: Redis
+
+    _url: str
+
+    def __init__(self, config: Config):
+        super().__init__(config)
+        self._url = str(config.get("url"))
 
     @property
     def conn(self):
