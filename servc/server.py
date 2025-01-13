@@ -1,5 +1,5 @@
 from multiprocessing import Process
-from typing import Any, List, Tuple
+from typing import List
 
 from servc.svc import Middleware
 from servc.svc.com.bus import BusComponent, OnConsuming
@@ -15,14 +15,7 @@ def blankOnConsuming(route: str):
     print("Consuming on route", route, flush=True)
 
 
-COMPONENT_ARRAY = List[Tuple[type[Middleware], List[Any]]]
-
-
-def compose_components(component_list: COMPONENT_ARRAY) -> List[Middleware]:
-    components: List[Middleware] = []
-    for [componentClass, args] in component_list:
-        components.append(componentClass(*args))
-    return components
+COMPONENT_ARRAY = List[type[Middleware]]
 
 
 def start_consumer(
@@ -38,15 +31,10 @@ def start_consumer(
 ):
     config = configClass()
     config.setAll(configDictionary)
-    bus = busClass(
-        config.get("conf.bus.url"),
-        config.get("conf.bus.routemap"),
-        config.get("conf.bus.prefix"),
-    )
-    cache = cacheClass(config.get("conf.cache.url"))
+    bus = busClass(config.get(f"conf.{busClass.name}"))
+    cache = cacheClass(config.get(f"conf.{cacheClass.name}"))
+
     consumer = workerClass(
-        config.get("conf.bus.route"),
-        config.get("conf.instanceid"),
         resolver,
         eventResolver,
         onConsuming,
@@ -54,7 +42,7 @@ def start_consumer(
         busClass,
         cache,
         config,
-        compose_components(components),
+        [X(config.get(f"conf.{X.name}")) for X in components],
     )
     consumer.connect()
 
@@ -93,18 +81,12 @@ def start_server(
     )
     consumer.start()
 
-    bus = busClass(
-        config.get("conf.bus.url"),
-        config.get("conf.bus.routemap"),
-        config.get("conf.bus.prefix"),
-    )
-    cache = cacheClass(config.get("conf.cache.url"))
+    bus = busClass(config.get(f"conf.{busClass.name}"))
+    cache = cacheClass(config.get(f"conf.{cacheClass.name}"))
     http = httpClass(
-        int(config.get("conf.http.port")),
+        config.get(f"conf.{httpClass.name}"),
         bus,
         cache,
-        config.get("conf.bus.route"),
-        config.get("conf.instanceid"),
         consumer,
         resolver,
         eventResolver,

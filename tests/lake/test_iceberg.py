@@ -26,6 +26,7 @@ mytable: LakeTable = {
 }
 
 config = {
+    "database": "default",
     "catalog_name": "default",
     "catalog_properties": {
         "type": "sql",
@@ -47,7 +48,7 @@ class TestLakeIceberg(unittest.TestCase):
         self.assertTrue(self.iceberg.isOpen)
 
     def test_name(self):
-        self.assertEqual(self.iceberg.name, "default.bronze-test")
+        self.assertEqual(self.iceberg.tablename, "default.bronze-test")
 
     def test_insert(self):
         self.iceberg.overwrite([])

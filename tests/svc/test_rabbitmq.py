@@ -11,7 +11,7 @@ class TestRabbitMQ(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         config = Config()
-        cls.bus = BusRabbitMQ(config.get("conf.bus.url"), {}, "")
+        cls.bus = BusRabbitMQ(config.get("conf.bus"))
 
         params = pika.URLParameters(config.get("conf.bus.url"))
         cls.conn = pika.BlockingConnection(params)
@@ -41,8 +41,7 @@ class TestRabbitMQ(unittest.TestCase):
         self.assertTrue(self.bus.getRoute(route).startswith(prefix))
 
         self.bus._routeMap = mapPrefix
-        self.assertEqual(self.bus.getRoute(route),
-                         "".join([prefix, mapPrefix[route]]))
+        self.assertEqual(self.bus.getRoute(route), "".join([prefix, mapPrefix[route]]))
         self.assertEqual(
             self.bus.getRoute("fake_route"), "".join([prefix, "fake_route"])
         )
@@ -108,7 +107,7 @@ class TestRabbitMQ(unittest.TestCase):
     def test_existent_queue_length(self):
         route = "test_route"
         self.bus.delete_queue(route)
-        self.bus.create_queue(route)
+        self.bus.create_queue(route, False)
 
         self.assertEqual(self.bus.get_queue_length(route), 0)
 

@@ -1,19 +1,18 @@
 from typing import Any
 
 from servc.svc import ComponentType, Middleware
+from servc.svc.config import Config
 from servc.svc.io.output import StatusCode
 from servc.svc.io.response import generateResponseArtifact
 
 
 class CacheComponent(Middleware):
+    name: str = "cache"
+
     _type: ComponentType = ComponentType.CACHE
 
-    _url: str
-
-    def __init__(self, url: str):
-        super().__init__()
-
-        self._url = url
+    def __init__(self, config: Config):
+        super().__init__(config)
 
     def setKey(self, id: str, value: Any) -> str:
         return ""

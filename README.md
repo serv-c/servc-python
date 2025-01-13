@@ -13,21 +13,15 @@ Serv-C implmentation for Python. Documentation can be found [here][1]
 Here is the most simple example of use, starting a server to handle requests at the route `my-route`;
 
 ```python
-from typing import Any, List
+from typing import Any
 
-from servc.svc import Middleware
 from servc.server import start_server
-from servc.svc.com.bus import BusComponent
-from servc.svc.com.cache import CacheComponent
-from servc.svc.com.worker.types import EMIT_EVENT, RESOLVER_RETURN_TYPE
+from servc.svc.com.worker.types import RESOLVER_CONTEXT, RESOLVER_RETURN_TYPE
 
 def inputProcessor(
   messageId: str,
-  bus: BusComponent,
-  cache: CacheComponent,
   payload: Any,
-  components: List[Middleware],
-  emitEvent: EMIT_EVENT,
+  context: RESOLVER_CONTEXT,
 ) -> RESOLVER_RETURN_TYPE:
   return True
 

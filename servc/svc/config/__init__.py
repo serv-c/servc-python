@@ -52,6 +52,8 @@ class Config:
             ):
                 self.setValue(key.replace("__", ".").lower(), value)
 
+        self.setValue("conf.bus.instanceid", self.get("conf.instanceid"))
+
         # validate conf.file matches config_path. Otherwise, raise an exception because we are not able to load the configuration file
         if self.get("conf.file") != config_path:
             raise Exception("Configuration file does not match the configuration path")

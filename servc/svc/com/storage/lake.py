@@ -4,6 +4,7 @@ from typing import Any, Dict, List, NotRequired, TypedDict
 from pyarrow import RecordBatchReader, Schema, Table
 
 from servc.svc.com.storage import StorageComponent
+from servc.svc.config import Config
 
 
 class Medallion(Enum):
@@ -21,19 +22,23 @@ class LakeTable(TypedDict):
 
 
 class Lake(StorageComponent):
+    name: str = "lake"
+
     _table: Any
 
-    def __init__(self, config: Dict[str, Any] | None, table: LakeTable | str):
+    _database: str
+
+    def __init__(self, config: Config, table: LakeTable | str):
         super().__init__(config)
+
         self._table = table
+        self._database = str(config.get("database"))
+
         if not isinstance(self._table, str) and "options" not in self._table:
             self._table["options"] = {}
 
-    def _getDatabase(self) -> str:
-        return self._config.get("database", "default")
-
     def _get_table_name(self) -> str:
-        schema: str = self._getDatabase()
+        schema: str = self._database
 
         name_w_medallion: str = ""
         if isinstance(self._table, str):
@@ -46,7 +51,7 @@ class Lake(StorageComponent):
         return ".".join([schema, name_w_medallion])
 
     @property
-    def name(self) -> str:
+    def tablename(self) -> str:
         return self._get_table_name()
 
     def getPartitions(self) -> Dict[str, List[Any]] | None:

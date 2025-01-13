@@ -10,7 +10,7 @@ class TestRedis(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         config = Config()
-        cls.cache = CacheRedis(config.get("conf.cache.url"))
+        cls.cache = CacheRedis(config.get("conf.cache"))
 
     @classmethod
     def tearDownClass(cls) -> None:
