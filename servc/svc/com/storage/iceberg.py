@@ -40,9 +40,15 @@ class IceBerg(Lake):
             return None
 
         tableName = self._get_table_name()
-        doesExist = self._catalog.table_exists(tableName)
+        try:
+            # fix: hack error on rest api, unexplainable
+            # requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+            doesExist = self._catalog.table_exists(tableName)
+        except:
+            doesExist = False
         if doesExist:
             self._ice = self._catalog.load_table(tableName)
+
         elif not doesExist and isinstance(self._table, str):
             raise Exception(f"Table {tableName} does not exist")
         else:
@@ -64,7 +70,9 @@ class IceBerg(Lake):
             partitionSpec: PartitionSpec = PartitionSpec(*partitions)
 
             self._catalog.create_namespace_if_not_exists(self._database)
-            self._ice = self._catalog.create_table(
+
+            # TODO: undo this garbage when rest catalog works
+            self._ice = self._catalog.create_table_if_not_exists(
                 tableName,
                 self._table["schema"],
                 partition_spec=partitionSpec,
