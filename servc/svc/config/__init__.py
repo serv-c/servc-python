@@ -59,7 +59,7 @@ class Config:
             raise Exception("Configuration file does not match the configuration path")
 
     def get(self, key: str) -> Any:
-        keys = key.lower().split(".")
+        keys = [x.replace("--", ".") for x in key.lower().split(".")]
         subconfig = self._configDictionary
 
         for index, subkey in enumerate(keys):
@@ -71,7 +71,7 @@ class Config:
                 subconfig = subconfig.get(subkey, {})
 
     def setValue(self, key: str, value: Any):
-        keys = key.lower().split(".")
+        keys = [x.replace("--", ".") for x in key.lower().split(".")]
         subconfig = self._configDictionary
 
         for index, subkey in enumerate(keys):
