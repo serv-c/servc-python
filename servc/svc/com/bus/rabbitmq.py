@@ -37,6 +37,8 @@ class BusRabbitMQ(BusComponent):
 
     _conn: AsyncioConnection | BlockingConnection | None = None
 
+    _consumingArgs: Tuple[str, InputProcessor, OnConsuming | None, bool] | None = None
+
     @property
     def isReady(self) -> bool:
         return (
@@ -83,7 +85,13 @@ class BusRabbitMQ(BusComponent):
         if reason == pika.exceptions.StreamLostError:
             print(str(reason), flush=True)
             self._conn = None
-            self._connect()
+
+            # if this happens while consuming, then we need to re establish the on-consuming method
+            if self._consumingArgs:
+                route, inputProcessor, onConsuming, bindEventExchange = (
+                    self._consumingArgs
+                )
+                self.subscribe(route, inputProcessor, onConsuming, bindEventExchange)
 
     def get_channel(self, method: Callable | None, args: Tuple | None):
         if not self.isReady:
@@ -197,6 +205,7 @@ class BusRabbitMQ(BusComponent):
             return self.get_channel(
                 self.subscribe, (route, inputProcessor, onConsuming, bindEventExchange)
             )
+        self._consumingArgs = (route, inputProcessor, onConsuming, bindEventExchange)
         channel.add_on_close_callback(lambda _c, _r: self.close())
         channel.add_on_cancel_callback(lambda _c: self.close())
 
