@@ -18,13 +18,11 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(self.config.get("conf.bus.prefix"), "test")
 
         self.config.setValue("conf.bus.routemap.api", "test_route")
-        self.assertEqual(self.config.get(
-            "conf.bus.routemap.api"), "test_route")
+        self.assertEqual(self.config.get("conf.bus.routemap.api"), "test_route")
 
-        self.config.setValue("conf.bus.routemap--api", "test_route")
-        self.assertEqual(self.config.get(
-            "conf.bus.routemap--api"), "test_route")
-        self.assertIn("routemap.api", self.config.get('conf.bus'))
+        self.config.setValue("conf.bus.routemap_DOT_api", "test_route")
+        self.assertEqual(self.config.get("conf.bus.routemap_DOT_api"), "test_route")
+        self.assertIn("routemap.api", self.config.get("conf.bus"))
 
     def test_wrong_location(self):
         try:
