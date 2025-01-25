@@ -20,6 +20,8 @@ defaults = {
     "conf.bus.bindtoeventexchange": True,
 }
 
+DOT_MARKER = os.getenv("SERVC_DOT_MARKER", "_DOT_")
+
 
 class Config:
     _configDictionary: dict = {}
@@ -50,7 +52,7 @@ class Config:
                 "CONF__FILE",
                 "CONF__BUS__ROUTEMAP",
             ):
-                self.setValue(key.replace("__", ".").lower(), value)
+                self.setValue(key.replace("__", "."), value)
 
         self.setValue("conf.bus.instanceid", self.get("conf.instanceid"))
 
@@ -59,7 +61,7 @@ class Config:
             raise Exception("Configuration file does not match the configuration path")
 
     def get(self, key: str) -> Any:
-        keys = [x.replace("--", ".") for x in key.lower().split(".")]
+        keys = [x.replace(DOT_MARKER, ".") for x in key.split(".")]
         subconfig = self._configDictionary
 
         for index, subkey in enumerate(keys):
@@ -71,7 +73,8 @@ class Config:
                 subconfig = subconfig.get(subkey, {})
 
     def setValue(self, key: str, value: Any):
-        keys = [x.replace("--", ".") for x in key.lower().split(".")]
+        key = key.lower().replace(DOT_MARKER.lower(), DOT_MARKER)
+        keys = [x.replace(DOT_MARKER, ".") for x in key.split(".")]
         subconfig = self._configDictionary
 
         for index, subkey in enumerate(keys):
