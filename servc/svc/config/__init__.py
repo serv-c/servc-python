@@ -21,6 +21,7 @@ defaults = {
 }
 
 DOT_MARKER = os.getenv("SERVC_DOT_MARKER", "_DOT_")
+DASH_MARKER = os.getenv("SERVC_DASH_MARKER", "_DASH_")
 
 
 class Config:
@@ -52,7 +53,7 @@ class Config:
                 "CONF__FILE",
                 "CONF__BUS__ROUTEMAP",
             ):
-                self.setValue(key.replace("__", "."), value)
+                self.setValue(key.replace(DASH_MARKER, "-").replace("__", "."), value)
 
         self.setValue("conf.bus.instanceid", self.get("conf.instanceid"))
 
