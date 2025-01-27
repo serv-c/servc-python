@@ -140,8 +140,8 @@ class HTTPInterface(Middleware):
                     if key not in body:
                         return f"missing key {key}", StatusCode.INVALID_INPUTS.value
 
-                id = self._bus.emitEvent(body["event"], body["details"])
-                return id
+                self._bus.emitEvent(body["event"], body["details"])
+                return body
             elif body["type"] == InputType.INPUT.value:
                 must_have_keys = ["route", "argument"]
                 for key in must_have_keys:
