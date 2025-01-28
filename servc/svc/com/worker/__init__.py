@@ -65,7 +65,7 @@ class WorkerComponent(Middleware):
         self._cache = cache
         self._config = config
         self._bindToEventExchange = (
-            config.get(f"conf.{self.name}.bindtoeventexchange")
+            config.get(f"conf.{self.name}.bindtoeventexchange", "true").lower() == "true"
             if len(self._eventResolvers.keys()) > 0
             else False
         )
