@@ -18,8 +18,12 @@ defaults = {
     "conf.bus.routemap": json.loads(os.getenv("CONF__BUS__ROUTEMAP", json.dumps({}))),
     "conf.bus.prefix": "",
     "conf.worker.bindtoeventexchange": True,
+    "conf.worker.exiton5xx": True,
 }
 
+BOOLEAN_CONFIGS = os.getenv(
+    "SERVC_BOOLEAN_CONFIGS", "conf.worker.exiton5xx,conf.worker.bindtoeventexchange"
+).split(",")
 DOT_MARKER = os.getenv("SERVC_DOT_MARKER", "_DOT_")
 DASH_MARKER = os.getenv("SERVC_DASH_MARKER", "_DASH_")
 
@@ -53,7 +57,10 @@ class Config:
                 "CONF__FILE",
                 "CONF__BUS__ROUTEMAP",
             ):
-                self.setValue(key.replace(DASH_MARKER, "-").replace("__", "."), value)
+                newkey = key.replace(DASH_MARKER, "-").replace("__", ".")
+                if newkey.lower() in BOOLEAN_CONFIGS:
+                    value = value.lower() in ("yes", "true", "t", "1")
+                self.setValue(newkey, value)
 
         self.setValue("conf.bus.instanceid", self.get("conf.instanceid"))
 
