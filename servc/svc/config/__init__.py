@@ -17,7 +17,7 @@ defaults = {
     "conf.bus.route": os.getenv("CONF__BUS__QUEUE", os.getenv("QUEUE_NAME", "test")),
     "conf.bus.routemap": json.loads(os.getenv("CONF__BUS__ROUTEMAP", json.dumps({}))),
     "conf.bus.prefix": "",
-    "conf.bus.bindtoeventexchange": True,
+    "conf.worker.bindtoeventexchange": True,
 }
 
 DOT_MARKER = os.getenv("SERVC_DOT_MARKER", "_DOT_")
