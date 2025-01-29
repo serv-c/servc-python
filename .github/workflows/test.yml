@@ -50,7 +50,7 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Type check
-        run: mypy servc
+        run: mypy servc --check-untyped-defs
 
       - name: Run tests
         env:

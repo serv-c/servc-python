@@ -1,10 +1,10 @@
-from typing import Any, List
+from typing import Any, List, Tuple
 
 from servc.svc import ComponentType, Middleware
 from servc.svc.com.bus import BusComponent, OnConsuming
 from servc.svc.com.cache import CacheComponent
 from servc.svc.com.worker.hooks import evaluate_post_hooks, evaluate_pre_hooks
-from servc.svc.com.worker.types import RESOLVER_CONTEXT, RESOLVER_MAPPING
+from servc.svc.com.worker.types import RESOLVER, RESOLVER_CONTEXT, RESOLVER_MAPPING
 from servc.svc.config import Config
 from servc.svc.io.input import InputType
 from servc.svc.io.output import (
@@ -12,6 +12,7 @@ from servc.svc.io.output import (
     MethodNotFoundException,
     NoProcessingException,
     NotAuthorizedException,
+    ResponseArtifact,
     StatusCode,
 )
 from servc.svc.io.response import getAnswerArtifact, getErrorArtifact
@@ -102,6 +103,35 @@ class WorkerComponent(Middleware):
             bindEventExchange=self._bindToEventExchange,
         )
 
+    def run_resolver(
+        self, method: RESOLVER, context: RESOLVER_CONTEXT, args: Tuple[str, Any]
+    ) -> Tuple[StatusCode, ResponseArtifact | None]:
+        id, payload = args
+        try:
+            response = method(id, payload, context)
+            return StatusCode.OK, getAnswerArtifact(id, response)
+        except NotAuthorizedException as e:
+            return StatusCode.NOT_AUTHORIZED, getErrorArtifact(
+                id, str(e), StatusCode.NOT_AUTHORIZED
+            )
+        except InvalidInputsException as e:
+            return StatusCode.INVALID_INPUTS, getErrorArtifact(
+                id, str(e), StatusCode.INVALID_INPUTS
+            )
+        except NoProcessingException:
+            return StatusCode.NO_PROCESSING, None
+        except MethodNotFoundException as e:
+            return StatusCode.METHOD_NOT_FOUND, getErrorArtifact(
+                id, str(e), StatusCode.METHOD_NOT_FOUND
+            )
+        except Exception as e:
+            if self._config.get(f"conf.{self.name}.exiton5xx"):
+                print("Exiting due to 5xx error", e, flush=True)
+                exit(1)
+            return StatusCode.SERVER_ERROR, getErrorArtifact(
+                id, str(e), StatusCode.SERVER_ERROR
+            )
+
     def inputProcessor(self, message: Any) -> StatusCode:
         bus = self._busClass(
             self._config.get(f"conf.{self._bus.name}"),
@@ -126,8 +156,14 @@ class WorkerComponent(Middleware):
                 return StatusCode.INVALID_INPUTS
             if message["event"] not in self._eventResolvers:
                 return StatusCode.METHOD_NOT_FOUND
-            self._eventResolvers[message["event"]]("", {**message}, context)
-            return StatusCode.OK
+
+            status_code, response = self.run_resolver(
+                self._eventResolvers[message["event"]],
+                context,
+                ("", {**message}),
+            )
+
+            return status_code
 
         if message["type"] in [InputType.INPUT.value, InputType.INPUT]:
             if "id" not in message:
@@ -177,45 +213,17 @@ class WorkerComponent(Middleware):
             if not continueExecution:
                 return StatusCode.OK
 
-            statusCode: StatusCode = StatusCode.OK
-            try:
-                response = self._resolvers[artifact["method"]](
-                    message["id"],
-                    artifact["inputs"],
-                    context,
-                )
-                cache.setKey(message["id"], getAnswerArtifact(message["id"], response))
-            except NotAuthorizedException as e:
-                cache.setKey(
-                    message["id"],
-                    getErrorArtifact(message["id"], str(e), StatusCode.NOT_AUTHORIZED),
-                )
-                statusCode = StatusCode.NOT_AUTHORIZED
-            except InvalidInputsException as e:
-                cache.setKey(
-                    message["id"],
-                    getErrorArtifact(message["id"], str(e), StatusCode.INVALID_INPUTS),
-                )
-                statusCode = StatusCode.INVALID_INPUTS
-            except NoProcessingException:
+            statusCode, response = self.run_resolver(
+                self._resolvers[artifact["method"]],
+                context,
+                (message["id"], artifact["inputs"]),
+            )
+            if statusCode == StatusCode.NO_PROCESSING:
                 return StatusCode.NO_PROCESSING
-            except MethodNotFoundException as e:
-                cache.setKey(
-                    message["id"],
-                    getErrorArtifact(
-                        message["id"], str(e), StatusCode.METHOD_NOT_FOUND
-                    ),
-                )
-                statusCode = StatusCode.METHOD_NOT_FOUND
-            except Exception as e:
-                cache.setKey(
-                    message["id"],
-                    getErrorArtifact(message["id"], str(e), StatusCode.SERVER_ERROR),
-                )
-                statusCode = StatusCode.SERVER_ERROR
-            finally:
-                evaluate_post_hooks(bus, cache, message, artifact)
-                return statusCode
+
+            cache.setKey(message["id"], response)
+            evaluate_post_hooks(bus, cache, message, artifact)
+            return statusCode
 
         cache.setKey(
             message["id"],
