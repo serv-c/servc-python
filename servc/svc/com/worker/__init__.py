@@ -140,7 +140,7 @@ class WorkerComponent(Middleware):
             and statuscode.value >= 400
             and statuscode.value < 500
         ):
-            print("Exiting due to 5xx error", error, flush=True)
+            print("Exiting due to 4xx error", error, flush=True)
             exit(1)
 
         return statuscode, response
@@ -215,6 +215,9 @@ class WorkerComponent(Middleware):
                         message["id"], "Method not found", StatusCode.METHOD_NOT_FOUND
                     ),
                 )
+                if self._config.get(f"conf.{self.name}.exiton4xx"):
+                    print("Exiting due to 4xx error:", "Method not found", flush=True)
+                    exit(1)
                 return StatusCode.METHOD_NOT_FOUND
 
             continueExecution = evaluate_pre_hooks(
