@@ -24,7 +24,17 @@ defaults = {
 
 BOOLEAN_CONFIGS = os.getenv(
     "SERVC_BOOLEAN_CONFIGS",
-    "conf.worker.exiton4xx,conf.worker.exiton5xx,conf.worker.bindtoeventexchange",
+    ",".join(
+        [
+            "conf.worker.exiton400",
+            "conf.worker.exiton404",
+            "conf.worker.exiton401",
+            "conf.worker.exiton422",
+            "conf.worker.exiton4xx",
+            "conf.worker.exiton5xx",
+            "conf.worker.bindtoeventexchange",
+        ]
+    ),
 ).split(",")
 DOT_MARKER = os.getenv("SERVC_DOT_MARKER", "_DOT_")
 DASH_MARKER = os.getenv("SERVC_DASH_MARKER", "_DASH_")
