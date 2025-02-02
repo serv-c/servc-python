@@ -19,10 +19,12 @@ defaults = {
     "conf.bus.prefix": "",
     "conf.worker.bindtoeventexchange": True,
     "conf.worker.exiton5xx": True,
+    "conf.worker.exiton4xx": False,
 }
 
 BOOLEAN_CONFIGS = os.getenv(
-    "SERVC_BOOLEAN_CONFIGS", "conf.worker.exiton5xx,conf.worker.bindtoeventexchange"
+    "SERVC_BOOLEAN_CONFIGS",
+    "conf.worker.exiton4xx,conf.worker.exiton5xx,conf.worker.bindtoeventexchange",
 ).split(",")
 DOT_MARKER = os.getenv("SERVC_DOT_MARKER", "_DOT_")
 DASH_MARKER = os.getenv("SERVC_DASH_MARKER", "_DASH_")

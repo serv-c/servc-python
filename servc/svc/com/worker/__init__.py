@@ -107,30 +107,43 @@ class WorkerComponent(Middleware):
         self, method: RESOLVER, context: RESOLVER_CONTEXT, args: Tuple[str, Any]
     ) -> Tuple[StatusCode, ResponseArtifact | None]:
         id, payload = args
+        statuscode: StatusCode = StatusCode.OK
+        response: ResponseArtifact | None = None
+        error: Any = None
+
         try:
-            response = method(id, payload, context)
-            return StatusCode.OK, getAnswerArtifact(id, response)
+            response = getAnswerArtifact(id, method(id, payload, context))
         except NotAuthorizedException as e:
-            return StatusCode.NOT_AUTHORIZED, getErrorArtifact(
-                id, str(e), StatusCode.NOT_AUTHORIZED
-            )
+            error = e
+            statuscode = StatusCode.NOT_AUTHORIZED
+            response = getErrorArtifact(id, str(e), StatusCode.NOT_AUTHORIZED)
         except InvalidInputsException as e:
-            return StatusCode.INVALID_INPUTS, getErrorArtifact(
-                id, str(e), StatusCode.INVALID_INPUTS
-            )
+            error = e
+            statuscode = StatusCode.INVALID_INPUTS
+            response = getErrorArtifact(id, str(e), StatusCode.INVALID_INPUTS)
         except NoProcessingException:
-            return StatusCode.NO_PROCESSING, None
+            statuscode = StatusCode.NO_PROCESSING
         except MethodNotFoundException as e:
-            return StatusCode.METHOD_NOT_FOUND, getErrorArtifact(
-                id, str(e), StatusCode.METHOD_NOT_FOUND
-            )
+            error = e
+            statuscode = StatusCode.METHOD_NOT_FOUND
+            response = getErrorArtifact(id, str(e), StatusCode.METHOD_NOT_FOUND)
         except Exception as e:
-            if self._config.get(f"conf.{self.name}.exiton5xx"):
-                print("Exiting due to 5xx error", e, flush=True)
-                exit(1)
-            return StatusCode.SERVER_ERROR, getErrorArtifact(
-                id, str(e), StatusCode.SERVER_ERROR
-            )
+            error = e
+            statuscode = StatusCode.SERVER_ERROR
+            response = getErrorArtifact(id, str(e), StatusCode.SERVER_ERROR)
+
+        if self._config.get(f"conf.{self.name}.exiton5xx") and statuscode.value >= 500:
+            print("Exiting due to 5xx error", error, flush=True)
+            exit(1)
+        if (
+            self._config.get(f"conf.{self.name}.exiton4xx")
+            and statuscode.value >= 400
+            and statuscode.value < 500
+        ):
+            print("Exiting due to 5xx error", error, flush=True)
+            exit(1)
+
+        return statuscode, response
 
     def inputProcessor(self, message: Any) -> StatusCode:
         bus = self._busClass(
