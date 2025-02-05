@@ -51,6 +51,10 @@ class Lake(StorageComponent):
         return ".".join([schema, name_w_medallion])
 
     @property
+    def table(self) -> LakeTable | str:
+        return self._table
+
+    @property
     def tablename(self) -> str:
         return self._get_table_name()
 
