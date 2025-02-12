@@ -8,7 +8,7 @@ from servc.svc.com.worker.hooks.oncomplete import process_complete_hook
 from servc.svc.config import Config
 from servc.svc.io.hooks import CompleteHookType
 from servc.svc.io.input import ArgumentArtifact, InputPayload, InputType
-from tests.hooks import get_route_message
+from tests import get_route_message
 
 message: InputPayload = {
     "id": "123",

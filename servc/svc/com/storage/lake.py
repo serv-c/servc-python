@@ -45,7 +45,7 @@ class Lake(StorageComponent):
             name_w_medallion = self._table
         else:
             name_w_medallion = "".join(
-                [self._table["medallion"].value, "-", self._table["name"]]
+                [self._table["medallion"].value, "_", self._table["name"]]
             )
 
         return ".".join([schema, name_w_medallion])

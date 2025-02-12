@@ -123,8 +123,10 @@ class TestParallelize(unittest.TestCase):
         }
 
         # true because resolver did not return a list
-        res = evaluate_part_pre_hook(new_mapping, message, art2, self.context)
-        self.assertTrue(res)
+        self.assertRaises(
+            Exception,
+            lambda: evaluate_part_pre_hook(new_mapping, message, art2, self.context),
+        )
 
     def test_w_on_complete_hook(self):
         self.bus._route = "test"
