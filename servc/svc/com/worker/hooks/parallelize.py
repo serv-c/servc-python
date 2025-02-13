@@ -57,8 +57,7 @@ def evaluate_part_pre_hook(
 
     jobs = resolvers[part_method](message["id"], artifact, context)
     if not isinstance(jobs, list):
-        print(f"Resolver {part_method} did not return a list")
-        return True
+        raise Exception(f"Resolver {part_method} did not return a list")
 
     # formulate on complete hook
     complete_hook: List[OnCompleteHook] = []
@@ -84,8 +83,9 @@ def evaluate_part_pre_hook(
             complete_hook.append(newHook)
 
     # create task queue
-    task_queue = f"part.{route}-{method}-{message['id']}"
-    bus.create_queue(task_queue, False)
+    if len(jobs):
+        task_queue = f"part.{route}-{method}-{message['id']}"
+        bus.create_queue(task_queue, False)
 
     # publish messages to part queue
     payload_template: InputPayload = {

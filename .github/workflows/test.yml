@@ -58,5 +58,5 @@ jobs:
           BUS_URL: amqp://guest:guest@${{ github.server_url != 'https://github.com' && 'rabbitmq' || 'localhost' }}
         run: |
           pip install coverage
-          coverage run -m unittest tests/**/*.py
+          coverage run -m unittest tests/*.py
           coverage report -m --fail-under=60
