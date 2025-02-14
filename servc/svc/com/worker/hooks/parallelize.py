@@ -83,8 +83,8 @@ def evaluate_part_pre_hook(
             complete_hook.append(newHook)
 
     # create task queue
+    task_queue = f"part.{route}-{method}-{message['id']}"
     if len(jobs):
-        task_queue = f"part.{route}-{method}-{message['id']}"
         bus.create_queue(task_queue, False)
 
     # publish messages to part queue
