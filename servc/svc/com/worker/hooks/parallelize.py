@@ -36,6 +36,7 @@ def process_post_part_hook(
 
     # check if all parts are complete
     if bus.get_queue_length(partHook["part_queue"]) == partHook["total_parts"]:
+        bus.delete_queue(partHook["part_queue"])
         return True
     return False
 
