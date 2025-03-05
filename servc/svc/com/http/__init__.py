@@ -116,7 +116,9 @@ class HTTPInterface(Middleware):
     def _getResponse(self, id: str):
         return jsonify(self._cache.getKey(id))
 
-    def _postMessage(self):
+    def _postMessage(self, extra_params: Dict | None = None):
+        if not extra_params:
+            extra_params = {}
         content_type = request.headers.get("Content-Type", None)
         if request.method == "GET":
             return self._getInformation()
@@ -154,6 +156,11 @@ class HTTPInterface(Middleware):
                     "id": body["id"] if "id" in body else "",
                     "argument": body["argument"],
                 }
+                if isinstance(body["argument"], dict):
+                    payload["argument"] = {
+                        **payload["argument"],
+                        **extra_params,
+                    }
                 if "instanceId" in body:
                     payload["instanceId"] = body["instanceId"]
                 force: bool = True if "force" in body and body["force"] else False
