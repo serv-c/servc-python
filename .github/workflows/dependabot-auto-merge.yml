@@ -1,0 +1,35 @@
+jobs:
+  dependabot:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    name: dependabot
+    steps:
+    - env:
+        GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        PR_URL: ${{github.event.pull_request.html_url}}
+      name: Enable auto-merge for Dependabot
+      run: gh pr merge --auto --merge "$PR_URL"
+  devopsbot:
+    if: github.event.pull_request.title == 'devopsbot update'
+    name: devopsbot
+    steps:
+    - env:
+        GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        PR_URL: ${{github.event.pull_request.html_url}}
+      name: Enable auto-merge for Dependabot
+      run: gh pr merge --auto --merge "$PR_URL"
+  rennovatebot:
+    if: github.event.pull_request.user.login == 'renovate_bot'
+    name: rennovatebot
+    steps:
+    - env:
+        GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        PR_URL: ${{github.event.pull_request.html_url}}
+      name: Enable auto-merge for Dependabot
+      run: gh pr merge --auto --merge "$PR_URL"
+name: Dependabot Auto-Merge
+'on':
+  pull_request: {}
+permissions:
+  contents: write
+  pull-requests: write
+run-name: Dependabot Auto-Merge

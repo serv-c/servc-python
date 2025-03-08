@@ -1,0 +1,32 @@
+jobs:
+  commitlint:
+    name: commitlint
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 100
+        fetch-tags: true
+        submodules: true
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    - name: Install commitlint
+      run: |
+        if [ -f package.json ]; then
+            rm package*.json
+        fi
+        npm install -g @commitlint/cli @commitlint/config-conventional
+        if [ ! -f "commitlint.config.js" ]; then
+            echo "module.exports = {extends: ['@commitlint/config-conventional']}" > commitlint.config.js
+        fi
+    - if: github.event_name == 'push'
+      name: Lint Commit Message
+      run: commitlint --from=HEAD~1 --verbose
+    - if: github.event_name == 'pull_request'
+      name: Lint Pull Request
+      run: commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
+name: COMMIT LINT
+'on':
+  pull_request: {}
+  push: {}
+run-name: COMMIT LINT
