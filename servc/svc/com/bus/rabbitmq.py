@@ -9,7 +9,6 @@ import pika.exceptions  # type: ignore
 import simplejson
 from pika.adapters.asyncio_connection import AsyncioConnection  # type: ignore
 from pika.adapters.blocking_connection import BlockingConnection  # type: ignore
-
 from servc.svc.com.bus import BusComponent, InputProcessor, OnConsuming
 from servc.svc.com.cache.redis import decimal_default
 from servc.svc.io.input import EventPayload, InputPayload, InputType
@@ -66,7 +65,11 @@ class BusRabbitMQ(BusComponent):
                     on_close_callback=self.on_connection_closed,
                 )
 
-    def _close(self):
+    def _close(self, expected=True, reason: Any = None):
+        print("Close method called", flush=True)
+        if not expected:
+            print("Unexpected close: ", reason, flush=True)
+            exit(1)
         if self.isOpen or self.isReady:
             if (
                 self._conn
@@ -198,8 +201,8 @@ class BusRabbitMQ(BusComponent):
             return self.get_channel(
                 self.subscribe, (route, inputProcessor, onConsuming, bindEventExchange)
             )
-        channel.add_on_close_callback(lambda _c, _r: self.close())
-        channel.add_on_cancel_callback(lambda _c: self.close())
+        channel.add_on_close_callback(lambda _c, r: self._close(False, r))
+        channel.add_on_cancel_callback(lambda _c: self._close(False))
 
         queue_declare(channel, self.getRoute(route), bindEventExchange)
         channel.basic_qos(prefetch_count=1)
