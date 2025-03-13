@@ -64,6 +64,7 @@ class BusRabbitMQ(BusComponent):
                     on_open_callback=lambda _c: self.get_channel(method, args),
                     on_close_callback=self.on_connection_closed,
                 )
+                self._conn.ioloop.run_forever()  # type: ignore
 
     def _close(self, expected=True, reason: Any = None):
         print("Close method called", flush=True)
@@ -193,7 +194,6 @@ class BusRabbitMQ(BusComponent):
                 (route, inputProcessor, onConsuming, bindEventExchange),
                 blocking=False,
             )
-            self._conn.ioloop.run_forever()  # type: ignore
         elif self.isBlockingConnection():
             self.close()
             return self.subscribe(route, inputProcessor, onConsuming, bindEventExchange)
