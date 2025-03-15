@@ -156,9 +156,9 @@ class HTTPInterface(Middleware):
                     "id": body["id"] if "id" in body else "",
                     "argument": body["argument"],
                 }
-                if isinstance(body["argument"]["inputs"], dict):
-                    body["argument"]["inputs"] = {
-                        **body["argument"]["inputs"],
+                if isinstance(payload["argument"]["inputs"], dict):
+                    payload["argument"]["inputs"] = {
+                        **payload["argument"]["inputs"],
                         **extra_params,
                     }
                 if "instanceId" in body:
