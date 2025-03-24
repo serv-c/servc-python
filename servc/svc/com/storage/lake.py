@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Dict, List, NotRequired, TypedDict
+from typing import Any, Dict, Generic, List, NotRequired, TypedDict, TypeVar
 
 from pyarrow import RecordBatchReader, Schema, Table
 
@@ -21,12 +21,17 @@ class LakeTable(TypedDict):
     options: NotRequired[Dict[str, Any]]
 
 
-class Lake(StorageComponent):
+T = TypeVar("T")
+
+
+class Lake(Generic[T], StorageComponent):
     name: str = "lake"
 
-    _table: Any
+    _table: LakeTable | str
 
     _database: str
+
+    _conn: T | None = None
 
     def __init__(self, config: Config, table: LakeTable | str):
         super().__init__(config)
@@ -36,6 +41,13 @@ class Lake(StorageComponent):
 
         if not isinstance(self._table, str) and "options" not in self._table:
             self._table["options"] = {}
+
+    def getConn(self) -> T:
+        if not self._isOpen:
+            self._connect()
+        if self._conn is None:
+            raise Exception("Table not connected")
+        return self._conn
 
     def _get_table_name(self) -> str:
         schema: str = self._database
@@ -57,6 +69,11 @@ class Lake(StorageComponent):
     @property
     def tablename(self) -> str:
         return self._get_table_name()
+
+    def _connect(self):
+        self._isReady = self._conn is not None
+        self._isOpen = self._conn is not None
+        return self._conn is not None
 
     def getPartitions(self) -> Dict[str, List[Any]] | None:
         return None
