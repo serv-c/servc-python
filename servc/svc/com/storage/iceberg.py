@@ -15,10 +15,9 @@ from servc.svc.com.storage.lake import Lake, LakeTable
 from servc.svc.config import Config
 
 
-class IceBerg(Lake):
+class IceBerg(Lake[Table]):
     # _table
     _catalog: Catalog
-    _ice: Table | None
 
     def __init__(self, config: Config, table: LakeTable | str):
         super().__init__(config, table)
@@ -33,7 +32,6 @@ class IceBerg(Lake):
             catalog_name,
             **{**catalog_properties},
         )
-        self._ice = None
 
     def _connect(self):
         if self.isOpen:
@@ -47,7 +45,7 @@ class IceBerg(Lake):
         except:
             doesExist = False
         if doesExist:
-            self._ice = self._catalog.load_table(tableName)
+            self._conn = self._catalog.load_table(tableName)
 
         elif not doesExist and isinstance(self._table, str):
             raise Exception(f"Table {tableName} does not exist")
@@ -72,7 +70,7 @@ class IceBerg(Lake):
             self._catalog.create_namespace_if_not_exists(self._database)
 
             # TODO: undo this garbage when rest catalog works
-            self._ice = self._catalog.create_table_if_not_exists(
+            self._conn = self._catalog.create_table_if_not_exists(
                 tableName,
                 self._table["schema"],
                 partition_spec=partitionSpec,
@@ -82,9 +80,7 @@ class IceBerg(Lake):
                 properties=self._table["options"].get("properties", {}),
             )
 
-        self._isReady = self._table is not None
-        self._isOpen = self._table is not None
-        return self._table is not None
+        return super()._connect()
 
     def _close(self):
         if self._isOpen:
@@ -94,13 +90,10 @@ class IceBerg(Lake):
         return False
 
     def getPartitions(self) -> Dict[str, List[Any]] | None:
-        if not self._isOpen:
-            self._connect()
-        if self._ice is None:
-            raise Exception("Table not connected")
+        table = self.getConn()
 
         partitions: Dict[str, List[Any]] = {}
-        for obj in self._ice.inspect.partitions().to_pylist():
+        for obj in table.inspect.partitions().to_pylist():
             for key, value in obj["partition"].items():
                 field = key.replace("_partition", "")
                 if field not in partitions:
@@ -109,54 +102,39 @@ class IceBerg(Lake):
         return partitions
 
     def getSchema(self) -> Schema | None:
-        if not self._isOpen:
-            self._connect()
-        if self._ice is None:
-            raise Exception("Table not connected")
+        table = self.getConn()
 
-        return self._ice.schema().as_arrow()
+        return table.schema().as_arrow()
 
     def getCurrentVersion(self) -> str | None:
-        if not self._isOpen:
-            self._connect()
-        if self._ice is None:
-            raise Exception("Table not connected")
+        table = self.getConn()
 
-        snapshot = self._ice.current_snapshot()
+        snapshot = table.current_snapshot()
         if snapshot is None:
             return None
         return str(snapshot.snapshot_id)
 
     def getVersions(self) -> List[str] | None:
-        if not self._isOpen:
-            self._connect()
-        if self._ice is None:
-            raise Exception("Table not connected")
+        table = self.getConn()
 
-        snapshots: paTable = self._ice.inspect.snapshots()
+        snapshots: paTable = table.inspect.snapshots()
         chunked = snapshots.column("snapshot_id")
         return [str(x) for x in chunked.to_pylist()]
 
     def insert(self, data: List[Any]) -> bool:
-        if not self._isOpen:
-            self._connect()
-        if self._ice is None:
-            raise Exception("Table not connected")
+        table = self.getConn()
 
-        self._ice.append(pa.Table.from_pylist(data, self.getSchema()))
+        table.append(pa.Table.from_pylist(data, self.getSchema()))
         return True
 
     def overwrite(
         self, data: List[Any], partitions: Dict[str, List[Any]] | None = None
     ) -> bool:
-        if not self._isOpen:
-            self._connect()
-        if self._ice is None:
-            raise Exception("Table not connected")
+        table = self.getConn()
 
         df = pa.Table.from_pylist(data, self.getSchema())
         if partitions is None or len(partitions) == 0:
-            self._ice.overwrite(df)
+            table.overwrite(df)
             return True
 
         # when partitions are provided, we need to filter the data
@@ -168,7 +146,7 @@ class IceBerg(Lake):
             for i in range(1, len(boolPartition)):
                 right_side = And(right_side, boolPartition[i])
 
-        self._ice.overwrite(df, overwrite_filter=right_side)
+        table.overwrite(df, overwrite_filter=right_side)
         return True
 
     def readRaw(
@@ -178,10 +156,7 @@ class IceBerg(Lake):
         version: str | None = None,
         options: Any | None = None,
     ) -> DataScan:
-        if not self._isOpen:
-            self._connect()
-        if self._ice is None:
-            raise Exception("Table not connected")
+        table = self.getConn()
 
         if options is None:
             options = {}
@@ -197,7 +172,7 @@ class IceBerg(Lake):
                 options.get("row_filter", AlwaysTrue()), right_side
             )
 
-        return self._ice.scan(
+        return table.scan(
             row_filter=options.get("row_filter", AlwaysTrue()),
             selected_fields=tuple(columns),
             limit=options.get("limit", None),
