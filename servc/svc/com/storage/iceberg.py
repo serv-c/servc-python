@@ -12,6 +12,7 @@ from pyiceberg.transforms import IdentityTransform
 from pyiceberg.types import NestedField
 
 from servc.svc.com.storage.lake import Lake, LakeTable
+from servc.svc.com.storage.tenant import TenantTable
 from servc.svc.config import Config
 
 
@@ -198,3 +199,7 @@ class IceBerg(Lake[Table]):
     ) -> paTable:
         data = self.readRaw(columns, partitions, version, options)
         return data.to_arrow()
+
+
+class IceBergTenant(TenantTable, IceBerg):
+    pass
