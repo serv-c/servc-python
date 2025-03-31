@@ -6,6 +6,7 @@ from deltalake import DeltaTable, write_deltalake
 from pyarrow import Schema, Table
 
 from servc.svc.com.storage.lake import Lake, LakeTable
+from servc.svc.com.storage.tenant import TenantTable
 from servc.svc.config import Config
 
 
@@ -186,3 +187,7 @@ class Delta(Lake[DeltaTable]):
             self._isOpen = False
             return True
         return False
+
+
+class DeltaTenant(TenantTable, Delta):
+    pass
