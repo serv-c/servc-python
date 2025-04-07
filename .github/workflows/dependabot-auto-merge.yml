@@ -1,0 +1,55 @@
+jobs:
+  dependabot:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    name: dependabot
+    runs-on:
+    - ubuntu-latest
+    steps:
+    - env:
+        GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        PR_URL: ${{github.event.pull_request.html_url}}
+      name: Enable auto-merge for Dependabot
+      run: gh pr merge --auto --merge "$PR_URL"
+  devopsbot:
+    if: github.event.pull_request.title == 'devopsbot update'
+    name: devopsbot
+    runs-on:
+    - ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        fetch-tags: true
+        submodules: true
+    - name: Setup GitHub CLI
+      uses: ksivamuthu/actions-setup-gh-cli@v3
+    - env:
+        GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        PR_URL: ${{github.event.pull_request.html_url}}
+      name: Enable auto-merge for Dependabot
+      run: gh pr merge --auto --merge "$PR_URL"
+  rennovatebot:
+    if: github.event.pull_request.user.login == 'renovate_bot'
+    name: rennovatebot
+    runs-on:
+    - ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        fetch-tags: true
+        submodules: true
+    - name: Setup GitHub CLI
+      uses: ksivamuthu/actions-setup-gh-cli@v3
+    - env:
+        GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        PR_URL: ${{github.event.pull_request.html_url}}
+      name: Enable auto-merge for Dependabot
+      run: gh pr merge --auto --merge "$PR_URL"
+name: Dependabot Auto-Merge
+'on':
+  pull_request: {}
+permissions:
+  contents: write
+  pull-requests: write
+run-name: Dependabot Auto-Merge
