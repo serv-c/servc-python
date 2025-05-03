@@ -1,9 +1,9 @@
+import json
 import os
 from multiprocessing import Process
 from typing import Dict, List, Tuple, TypedDict
 
 from flask import Flask, jsonify, request  # type: ignore
-
 from servc.svc import ComponentType, Middleware
 from servc.svc.client.send import sendMessage
 from servc.svc.com.bus import BusComponent
@@ -119,11 +119,14 @@ class HTTPInterface(Middleware):
     def _postMessage(self, extra_params: Dict | None = None):
         if not extra_params:
             extra_params = {}
-        content_type = request.headers.get("Content-Type", None)
+        content_type = request.headers.get("Content-Type", "")
         if request.method == "GET":
             return self._getInformation()
-        if content_type == "application/json":
-            body = request.json
+        if content_type == "application/json" or "multipart/form-data" in content_type:
+            if "multipart/form-data" in content_type:
+                body = json.loads(request.form["json"])
+            else:
+                body = request.json
             if not body:
                 return "bad request", StatusCode.INVALID_INPUTS.value
 
