@@ -175,7 +175,7 @@ class HTTPInterface(Middleware):
                     simple,
                     force=force,
                 )
-                return res_id
+                return jsonify(res_id)
             else:
                 return "bad request", StatusCode.INVALID_INPUTS.value
 
