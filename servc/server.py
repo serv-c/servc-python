@@ -90,6 +90,7 @@ def start_server(
         consumer,
         resolver,
         eventResolver,
+        [X(config.get(f"conf.{X.name}")) for X in components],
     )
     if start:
         http.start()

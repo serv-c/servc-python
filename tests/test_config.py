@@ -8,6 +8,10 @@ class TestConfig(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.config = Config()
 
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.config.setValue("conf.bus.prefix", "")
+
     def test_get_defaults(self):
         self.assertEqual(self.config.get("conf.file"), "/config/config.yaml")
         self.assertEqual(self.config.get("conf.bus.routemap"), {})
