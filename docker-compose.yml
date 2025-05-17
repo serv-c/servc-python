@@ -16,10 +16,6 @@ services:
   redis:
     image: redis
     restart: unless-stopped
-    expose:
-      - "6379"
-    ports:
-      - "6379:6379"
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -27,9 +23,3 @@ services:
       RABBITMQ_DEFAULT_USER: rabbitmq
       RABBITMQ_DEFAULT_PASS: rabbitmq
       RABBITMQ_DEFAULT_VHOST: /
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    expose:
-      - "5672"
-      - "15672"

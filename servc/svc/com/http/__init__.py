@@ -4,6 +4,7 @@ from multiprocessing import Process
 from typing import Dict, List, Tuple, TypedDict
 
 from flask import Flask, jsonify, request  # type: ignore
+
 from servc.svc import ComponentType, Middleware
 from servc.svc.client.send import sendMessage
 from servc.svc.com.bus import BusComponent
@@ -44,6 +45,8 @@ class HTTPInterface(Middleware):
 
     _consumer: Process
 
+    _components: List[type[Middleware]]
+
     _info: ServiceInformation
 
     def __init__(
@@ -54,6 +57,7 @@ class HTTPInterface(Middleware):
         consumerthread: Process,
         resolvers: RESOLVER_MAPPING,
         eventResolvers: RESOLVER_MAPPING,
+        components: List[type[Middleware]],
     ):
         super().__init__(config)
         self._port = int(config.get("port"))
@@ -64,6 +68,7 @@ class HTTPInterface(Middleware):
         self._children.append(self._bus)
         self._children.append(self._cache)
         self._consumer = consumerthread
+        self._components = components
 
         self._info = {
             "instanceId": self._bus.instanceId,
