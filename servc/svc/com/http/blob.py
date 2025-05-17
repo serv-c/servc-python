@@ -2,7 +2,7 @@ import json
 import os
 from io import BytesIO
 from multiprocessing import Process
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from flask import jsonify, request, send_file
 from werkzeug.utils import secure_filename
@@ -48,8 +48,8 @@ class HTTPUpload(HTTPInterface):
 
         self._uploadcontainer = config.get("uploadcontainer") or "uploads"
 
-    def get_upload_file_path(self, extra_params: Dict, fname: str) -> str:
-        return secure_filename(fname)
+    def get_upload_file_path(self, extra_params: Dict, fname: str) -> Tuple[str, str]:
+        return self._uploadcontainer, secure_filename(fname)
 
     def _postMessage(self, extra_params: Dict | None = None):
         if request.method == "POST" and len(list(request.files)) > 0:
@@ -59,11 +59,11 @@ class HTTPUpload(HTTPInterface):
 
             for filekey in list(request.files):
                 file = request.files[filekey]
-                remote_filename = self.get_upload_file_path(extra_params, file.filename)
+                container, remote_filename = self.get_upload_file_path(extra_params, file.filename)
 
                 if file.filename != "":
                     self._blobStorage.put_file(
-                        self._uploadcontainer, remote_filename, file.stream.read()
+                        container, remote_filename, file.stream.read()
                     )
                     extra_params["files"].append(remote_filename)
 
