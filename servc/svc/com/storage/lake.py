@@ -3,6 +3,7 @@ from typing import Any, Dict, Generic, List, NotRequired, TypedDict, TypeVar
 
 from pyarrow import RecordBatchReader, Schema, Table
 
+from servc.svc import ComponentType
 from servc.svc.com.storage import StorageComponent
 from servc.svc.config import Config
 
@@ -26,6 +27,8 @@ T = TypeVar("T")
 
 class Lake(Generic[T], StorageComponent):
     name: str = "lake"
+
+    _type: ComponentType = ComponentType.LAKE
 
     _table: LakeTable | str
 

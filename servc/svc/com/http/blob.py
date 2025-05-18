@@ -59,7 +59,9 @@ class HTTPUpload(HTTPInterface):
 
             for filekey in list(request.files):
                 file = request.files[filekey]
-                container, remote_filename = self.get_upload_file_path(extra_params, file.filename)
+                container, remote_filename = self.get_upload_file_path(
+                    extra_params, file.filename
+                )
 
                 if file.filename != "":
                     self._blobStorage.put_file(
