@@ -13,6 +13,26 @@ class ComponentType(Enum):
     INTERFACE = "interface"
     DATABASE = "database"
     STORAGE = "storage"
+    BLOB = "blob"
+    LAKE = "lake"
+
+
+def findComp(
+    middleware: List[Middleware],
+    filter: ComponentType | None = None,
+    name: str | None = None,
+) -> Middleware:
+    for x in middleware:
+        if ((filter and x.type == filter) or (not filter)) and (
+            (name and x.name == name) or (not name)
+        ):
+            return x
+
+    if filter and not name:
+        raise Exception(f"{filter.value} not found")
+    elif name and filter:
+        raise Exception(f"{filter.value} with name {name} not found")
+    raise Exception(f"{name} not found")
 
 
 class Middleware:
@@ -66,7 +86,4 @@ class Middleware:
     def getChild(
         self, filter: ComponentType | None = None, name: str | None = None
     ) -> Middleware:
-        for child in self._children:
-            if (filter and child.type == filter) or (name and child.name == name):
-                return child
-        raise Exception("Child of not found")
+        return findComp(self._children, filter, name)

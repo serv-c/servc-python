@@ -1,12 +1,15 @@
 from io import BytesIO
 from typing import List
 
+from servc.svc import ComponentType
 from servc.svc.com.storage import StorageComponent
 from servc.svc.config import Config
 
 
 class BlobStorage(StorageComponent):
     name: str = "blob"
+
+    _type: ComponentType = ComponentType.BLOB
 
     def __init__(self, config: Config):
         super().__init__(config)
