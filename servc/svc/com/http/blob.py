@@ -43,7 +43,7 @@ class HTTPUpload(HTTPInterface):
 
         blobs = [x for x in components if x.name == "blob"]
         if len(blobs) == 0:
-            raise ValueError("Blob storage component not found in components list")
+            raise Exception("Blob storage component not found in components list")
         self._blobStorage = blobs[0]  # type: ignore[assignment]
 
         self._uploadcontainer = config.get("uploadcontainer") or "uploads"
