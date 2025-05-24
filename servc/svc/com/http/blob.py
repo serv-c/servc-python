@@ -16,6 +16,7 @@ from servc.svc.com.worker import RESOLVER_MAPPING
 from servc.svc.config import Config
 from servc.svc.io.output import ResponseArtifact, StatusCode
 from servc.svc.io.response import getErrorArtifact
+from servc.util import findType
 
 
 def returnError(message: str, error: StatusCode = StatusCode.METHOD_NOT_FOUND):
@@ -35,17 +36,13 @@ class HTTPUpload(HTTPInterface):
         consumerthread: Process,
         resolvers: RESOLVER_MAPPING,
         eventResolvers: RESOLVER_MAPPING,
-        components: List[type[Middleware]],
+        components: List[Middleware],
     ):
         super().__init__(
             config, bus, cache, consumerthread, resolvers, eventResolvers, components
         )
 
-        blobs = [x for x in components if x.name == "blob"]
-        if len(blobs) == 0:
-            raise Exception("Blob storage component not found in components list")
-        self._blobStorage = blobs[0]  # type: ignore[assignment]
-
+        self._blobStorage = findType(components, BlobStorage)
         self._uploadcontainer = config.get("uploadcontainer") or "uploads"
 
     def get_upload_file_path(self, extra_params: Dict, fname: str) -> Tuple[str, str]:
