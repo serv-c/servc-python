@@ -17,7 +17,7 @@ from servc.svc.config import Config
 
 
 class IceBerg(Lake[Table]):
-    name: str = "iceberg"
+    _format: str = "iceberg"
 
     # _table
     _catalog: Catalog
