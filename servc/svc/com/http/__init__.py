@@ -45,7 +45,7 @@ class HTTPInterface(Middleware):
 
     _consumer: Process
 
-    _components: List[type[Middleware]]
+    _components: List[Middleware]
 
     _info: ServiceInformation
 
@@ -57,7 +57,7 @@ class HTTPInterface(Middleware):
         consumerthread: Process,
         resolvers: RESOLVER_MAPPING,
         eventResolvers: RESOLVER_MAPPING,
-        components: List[type[Middleware]],
+        components: List[Middleware],
     ):
         super().__init__(config)
         self._port = int(config.get("port"))
