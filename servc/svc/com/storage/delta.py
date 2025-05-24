@@ -11,7 +11,7 @@ from servc.svc.config import Config
 
 
 class Delta(Lake[DeltaTable]):
-    name: str = "delta"
+    _format: str = "delta"
 
     _storageOptions: Dict[str, str] = {}
 

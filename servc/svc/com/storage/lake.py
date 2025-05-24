@@ -28,6 +28,8 @@ T = TypeVar("T")
 class Lake(Generic[T], StorageComponent):
     name: str = "lake"
 
+    _format: str = "lake"
+
     _type: ComponentType = ComponentType.LAKE
 
     _table: LakeTable | str
