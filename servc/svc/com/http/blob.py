@@ -77,7 +77,7 @@ class HTTPUpload(HTTPInterface):
             return returnError("Bad Response", StatusCode.INVALID_INPUTS)
 
         if isinstance(response, dict):
-            art: ResponseArtifact = response
+            art: ResponseArtifact = response # type: ignore
             if "file" in art["responseBody"]:
                 data = self._blobStorage.get_file(
                     art["responseBody"].get("container", self._uploadcontainer),
