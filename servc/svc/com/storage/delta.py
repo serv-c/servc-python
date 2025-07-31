@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 import pyarrow as pa
 from deltalake import DeltaTable, write_deltalake
@@ -51,7 +51,7 @@ class Delta(Lake[DeltaTable]):
                 "aws_conditional_put": "etag",
             }
 
-    def _connect(self):
+    def _connect(self) -> bool | None:
         if self.isOpen:
             return None
 
@@ -78,7 +78,7 @@ class Delta(Lake[DeltaTable]):
         table.cleanup_metadata()
         table.create_checkpoint()
 
-    def getPartitions(self) -> Optional[Dict[str, List[Any]]]:
+    def getPartitions(self) -> Dict[str, List[Any]] | None:
         table = self.getConn()
 
         partitions: Dict[str, List[Any]] = {}
@@ -91,11 +91,11 @@ class Delta(Lake[DeltaTable]):
 
         return partitions
 
-    def getCurrentVersion(self) -> Optional[str]:
+    def getCurrentVersion(self) -> str | None:
         table = self.getConn()
         return str(table.get_version())
 
-    def getVersions(self) -> Optional[List[str]]:
+    def getVersions(self) -> List[str] | None:
         return [str(self.getCurrentVersion())]
 
     def insert(self, data: List[Any]) -> bool:
@@ -129,8 +129,8 @@ class Delta(Lake[DeltaTable]):
 
     def _filters(
         self,
-        partitions: Optional[Dict[str, List[Any]]] = None,
-    ) -> Optional[List[Tuple[str, str, Any]]]:
+        partitions: Dict[str, List[Any]] | None = None,
+    ) -> List[Tuple[str, str, Any]] | None:
         filters: List[Tuple[str, str, Any]] = []
         if partitions is None:
             return None
@@ -142,11 +142,11 @@ class Delta(Lake[DeltaTable]):
         return filters if len(filters) > 0 else None
 
     def overwrite(
-        self, data: List[Any], partitions: Optional[Dict[str, List[Any]]] = None
+        self, data: List[Any], partitions: Dict[str, List[Any]] | None = None
     ) -> bool:
         table = self.getConn()
 
-        predicate: Optional[str] = None
+        predicate: str | None = None
         filter = self._filters(partitions)
         if filter is not None:
             predicate = " & ".join([f"{col} {op} {self._escape_value(val)}" for col, op, val in filter])
@@ -163,9 +163,9 @@ class Delta(Lake[DeltaTable]):
     def readRaw(
         self,
         columns: List[str],
-        partitions: Optional[Dict[str, List[Any]]] = None,
-        version: Optional[str] = None,
-        options: Optional[Any] = None,
+        partitions: Dict[str, List[Any]] | None = None,
+        version: str | None = None,
+        options: Any | None = None,
     ) -> Table:
         table = self.getConn()
         if version is not None:
@@ -191,18 +191,18 @@ class Delta(Lake[DeltaTable]):
     def read(
         self,
         columns: List[str],
-        partitions: Optional[Dict[str, List[Any]]] = None,
-        version: Optional[str] = None,
-        options: Optional[Any] = None,
+        partitions: Dict[str, List[Any]] | None = None,
+        version: str | None = None,
+        options: Any | None = None,
     ) -> Table:
         return self.readRaw(columns, partitions, version, options)
 
-    def getSchema(self) -> Optional[Schema]:
+    def getSchema(self) -> Schema | None:
         table = self.getConn()
 
         return table.schema.to_pyarrow()
 
-    def _close(self):
+    def _close(self) -> bool:
         if self._isOpen:
             self._isReady = False
             self._isOpen = False
