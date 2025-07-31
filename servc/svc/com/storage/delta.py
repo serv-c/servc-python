@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import pyarrow as pa
 from deltalake import DeltaTable, write_deltalake
@@ -57,14 +57,15 @@ class Delta(Lake[DeltaTable]):
 
         tablename = self._get_table_name()
         uri = os.path.join(self._location_prefix, tablename)
-        self._conn = DeltaTable.create(
+        DeltaTable.create(
             table_uri=uri,
-            name=tablename,
             schema=self._table["schema"],
             partition_by=self._table["partitions"],
             mode="ignore",
             storage_options=self._storageOptions,
         )
+        # Now load the created table
+        self._conn = DeltaTable(uri, storage_options=self._storageOptions)
 
         return super()._connect()
 
@@ -72,7 +73,7 @@ class Delta(Lake[DeltaTable]):
         table = self.getConn()
 
         print("Optimizing", self._get_table_name(), flush=True)
-        table.optimize.compact()
+        table.optimize().compact()
         table.vacuum()
         table.cleanup_metadata()
         table.create_checkpoint()
@@ -81,7 +82,7 @@ class Delta(Lake[DeltaTable]):
         table = self.getConn()
 
         partitions: Dict[str, List[Any]] = {}
-        for obj in table.partitions():
+        for obj in table.get_partitions():
             for key, value in obj.items():
                 if key not in partitions:
                     partitions[key] = []
@@ -92,7 +93,7 @@ class Delta(Lake[DeltaTable]):
 
     def getCurrentVersion(self) -> str | None:
         table = self.getConn()
-        return str(table.version())
+        return str(table.get_version())
 
     def getVersions(self) -> List[str] | None:
         return [str(self.getCurrentVersion())]
@@ -129,7 +130,7 @@ class Delta(Lake[DeltaTable]):
         predicate: str | None = None
         filter = self._filters(partitions)
         if filter is not None:
-            predicate = " & ".join([" ".join(x) for x in filter])
+            predicate = " & ".join([f"{col} {op} {str(val)}" for col, op, val in filter])
 
         write_deltalake(
             table,
@@ -137,7 +138,6 @@ class Delta(Lake[DeltaTable]):
             storage_options=self._storageOptions,
             mode="overwrite",
             predicate=predicate,
-            engine="rust",
         )
         return True
 
@@ -150,7 +150,7 @@ class Delta(Lake[DeltaTable]):
     ) -> Table:
         table = self.getConn()
         if version is not None:
-            table.load_as_version(int(version))
+            table.load_version(int(version))
 
         if options is None or not isinstance(options, dict):
             options = {}
@@ -159,14 +159,14 @@ class Delta(Lake[DeltaTable]):
 
         if options.get("filter", None) is not None:
             return table.to_pyarrow_dataset(
-                partitions=self._filters(partitions),
+                filters=self._filters(partitions),
             ).to_table(
                 filter=options.get("filter"),
                 columns=rcolumns,
             )
         return table.to_pyarrow_table(
             columns=rcolumns,
-            partitions=self._filters(partitions),
+            filters=self._filters(partitions),
         )
 
     def read(
@@ -181,7 +181,7 @@ class Delta(Lake[DeltaTable]):
     def getSchema(self) -> Schema | None:
         table = self.getConn()
 
-        return table.schema().to_pyarrow()
+        return table.schema.to_pyarrow()
 
     def _close(self):
         if self._isOpen:
