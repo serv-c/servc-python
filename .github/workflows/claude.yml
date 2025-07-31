@@ -34,4 +34,4 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           timeout_minutes: "60"
-          allowed_tools: 'Bash(*),Bash(gh *),Bash(pip *),Bash(mypy *),Bash(python *),Bash(mypy servc --check-untyped-defs)'
+          allowed_tools: 'Bash(*),Bash(gh *),Bash(pip *),Bash(mypy *),Bash(python *),Bash(mypy servc --check-untyped-defs),Bash(pip install -r requirements-dev.txt)'
