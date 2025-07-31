@@ -2,9 +2,9 @@ import json
 import os
 from io import BytesIO
 from multiprocessing import Process
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
-from flask import jsonify, request, send_file
+from flask import jsonify, request, send_file, Response
 from werkzeug.utils import secure_filename
 
 from servc.svc import Middleware
@@ -19,7 +19,7 @@ from servc.svc.io.response import getErrorArtifact
 from servc.util import findType
 
 
-def returnError(message: str, error: StatusCode = StatusCode.METHOD_NOT_FOUND):
+def returnError(message: str, error: StatusCode = StatusCode.METHOD_NOT_FOUND) -> Response:
     return jsonify(getErrorArtifact("", message, error))
 
 
@@ -48,7 +48,7 @@ class HTTPUpload(HTTPInterface):
     def get_upload_file_path(self, extra_params: Dict, fname: str) -> Tuple[str, str]:
         return self._uploadcontainer, secure_filename(fname)
 
-    def _postMessage(self, extra_params: Dict | None = None):
+    def _postMessage(self, extra_params: Optional[Dict] = None):
         if request.method == "POST" and len(list(request.files)) > 0:
             if extra_params is None:
                 extra_params = {}
@@ -56,6 +56,8 @@ class HTTPUpload(HTTPInterface):
 
             for filekey in list(request.files):
                 file = request.files[filekey]
+                if file.filename is None:
+                    continue
                 container, remote_filename = self.get_upload_file_path(
                     extra_params, file.filename
                 )
@@ -68,14 +70,14 @@ class HTTPUpload(HTTPInterface):
 
         return super()._postMessage(extra_params)
 
-    def _getFile(self, id: str):
+    def _getFile(self, id: str) -> Response:
         try:
             response = self._cache.getKey(id)
         except json.JSONDecodeError:
             return returnError("Bad Response", StatusCode.INVALID_INPUTS)
 
         if isinstance(response, dict):
-            art: ResponseArtifact = response  # type: ignore
+            art: ResponseArtifact = response # type: ignore
             if "file" in art["responseBody"]:
                 data = self._blobStorage.get_file(
                     art["responseBody"].get("container", self._uploadcontainer),
@@ -94,7 +96,7 @@ class HTTPUpload(HTTPInterface):
                 )
         return returnError("File not found", StatusCode.INVALID_INPUTS)
 
-    def bindRoutes(self):
+    def bindRoutes(self) -> None:
         super().bindRoutes()
         self._server.add_url_rule(
             "/fid/<id>", "_getFile", self._getFile, methods=["GET"]
