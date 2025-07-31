@@ -137,7 +137,6 @@ class Delta(Lake[DeltaTable]):
             storage_options=self._storageOptions,
             mode="overwrite",
             predicate=predicate,
-            engine="rust",
         )
         return True
 
@@ -181,7 +180,8 @@ class Delta(Lake[DeltaTable]):
     def getSchema(self) -> Schema | None:
         table = self.getConn()
 
-        return table.schema().to_pyarrow()
+        arrow_schema = table.schema().to_arrow()
+        return pa.schema(arrow_schema)  # type: ignore[arg-type]
 
     def _close(self):
         if self._isOpen:
