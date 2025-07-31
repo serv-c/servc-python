@@ -78,7 +78,7 @@ class Delta(Lake[DeltaTable]):
         table.cleanup_metadata()
         table.create_checkpoint()
 
-    def getPartitions(self) -> Dict[str, List[Any]] | None:
+    def getPartitions(self) -> Optional[Dict[str, List[Any]]]:
         table = self.getConn()
 
         partitions: Dict[str, List[Any]] = {}
@@ -91,11 +91,11 @@ class Delta(Lake[DeltaTable]):
 
         return partitions
 
-    def getCurrentVersion(self) -> str | None:
+    def getCurrentVersion(self) -> Optional[str]:
         table = self.getConn()
         return str(table.get_version())
 
-    def getVersions(self) -> List[str] | None:
+    def getVersions(self) -> Optional[List[str]]:
         return [str(self.getCurrentVersion())]
 
     def insert(self, data: List[Any]) -> bool:
@@ -108,10 +108,29 @@ class Delta(Lake[DeltaTable]):
         )
         return True
 
+    def _escape_value(self, val: Any) -> str:
+        """Properly escape values for predicate building to prevent injection issues."""
+        if isinstance(val, str):
+            # Escape single quotes in strings and wrap in quotes
+            return f"'{val.replace(\"'\", \"''\")}"
+        elif isinstance(val, (int, float)):
+            return str(val)
+        elif isinstance(val, bool):
+            return str(val).lower()
+        elif val is None:
+            return "null"
+        elif isinstance(val, list):
+            # Handle list values for 'in' operations
+            escaped_items = [self._escape_value(item) for item in val]
+            return f"({', '.join(escaped_items)})"
+        else:
+            # Fallback to string representation with quotes
+            return f"'{str(val).replace(\"'\", \"''\")}"
+
     def _filters(
         self,
-        partitions: Dict[str, List[Any]] | None = None,
-    ) -> List[Tuple[str, str, Any]] | None:
+        partitions: Optional[Dict[str, List[Any]]] = None,
+    ) -> Optional[List[Tuple[str, str, Any]]]:
         filters: List[Tuple[str, str, Any]] = []
         if partitions is None:
             return None
@@ -123,14 +142,14 @@ class Delta(Lake[DeltaTable]):
         return filters if len(filters) > 0 else None
 
     def overwrite(
-        self, data: List[Any], partitions: Dict[str, List[Any]] | None = None
+        self, data: List[Any], partitions: Optional[Dict[str, List[Any]]] = None
     ) -> bool:
         table = self.getConn()
 
-        predicate: str | None = None
+        predicate: Optional[str] = None
         filter = self._filters(partitions)
         if filter is not None:
-            predicate = " & ".join([f"{col} {op} {str(val)}" for col, op, val in filter])
+            predicate = " & ".join([f"{col} {op} {self._escape_value(val)}" for col, op, val in filter])
 
         write_deltalake(
             table,
@@ -144,9 +163,9 @@ class Delta(Lake[DeltaTable]):
     def readRaw(
         self,
         columns: List[str],
-        partitions: Dict[str, List[Any]] | None = None,
-        version: str | None = None,
-        options: Any | None = None,
+        partitions: Optional[Dict[str, List[Any]]] = None,
+        version: Optional[str] = None,
+        options: Optional[Any] = None,
     ) -> Table:
         table = self.getConn()
         if version is not None:
@@ -172,13 +191,13 @@ class Delta(Lake[DeltaTable]):
     def read(
         self,
         columns: List[str],
-        partitions: Dict[str, List[Any]] | None = None,
-        version: str | None = None,
-        options: Any | None = None,
+        partitions: Optional[Dict[str, List[Any]]] = None,
+        version: Optional[str] = None,
+        options: Optional[Any] = None,
     ) -> Table:
         return self.readRaw(columns, partitions, version, options)
 
-    def getSchema(self) -> Schema | None:
+    def getSchema(self) -> Optional[Schema]:
         table = self.getConn()
 
         return table.schema.to_pyarrow()
