@@ -37,7 +37,7 @@ class Delta(Lake[DeltaTable]):
         else:
             self._location_prefix = os.path.join(
                 str(catalog_properties_raw.get("warehouse")),
-                str(catalog_properties_raw.get("s3.access-key-id")),
+                str(catalog_properties_raw.get("delta-prefix") or catalog_properties_raw.get("s3.access-key-id")),
             )
             self._storageOptions = {
                 "AWS_ACCESS_KEY_ID": str(
