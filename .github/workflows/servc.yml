@@ -52,7 +52,7 @@ jobs:
         run: sleep 20s
 
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: true
 
@@ -69,7 +69,7 @@ jobs:
           echo "CURRENT_PATH=$(pwd)" >> $GITHUB_ENV
 
       - name: Checkout Serv-C
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: serv-c/docs
           ref: ${{ env.SERVC_VERSION }}
@@ -99,7 +99,7 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: serv-c/docs
           fetch-depth: 100
