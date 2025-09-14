@@ -114,7 +114,7 @@ class TestLakeIceberg(unittest.TestCase):
         self.iceberg.insert([{"date": "2021-01-01", "some_int": 1}])
         orig_data = self.iceberg.read(["date"]).to_pylist()
 
-        iceberg = IceBerg(config, "default.bronze_test")
+        iceberg = IceBerg(config, "bronze_test")
         iceberg._connect()
         self.assertTrue(iceberg.isOpen)
 
