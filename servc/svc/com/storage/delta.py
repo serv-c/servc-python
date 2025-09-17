@@ -122,14 +122,14 @@ class Delta(Lake[DeltaTable]):
         return filters if len(filters) > 0 else None
 
     def overwrite(
-        self, data: List[Any], partitions: Dict[str, List[Any]] | None = None
+        self, data: List[Any], partitions: Dict[str, List[Any]] | None = None, operator: str = " & "
     ) -> bool:
         table = self.getConn()
 
         predicate: str | None = None
         filter = self._filters(partitions)
         if filter is not None:
-            predicate = " & ".join([" ".join(x) for x in filter])
+            predicate = operator.join([" ".join(x) for x in filter])
 
         write_deltalake(
             table,
