@@ -122,7 +122,7 @@ class Delta(Lake[DeltaTable]):
         return filters if len(filters) > 0 else None
 
     def overwrite(
-        self, data: List[Any], partitions: Dict[str, List[Any]] | None = None, operator:str = " & "
+        self, data: List[Any], partitions: Dict[str, List[Any]] | None = None, operator: str = " & "
     ) -> bool:
         table = self.getConn()
 
