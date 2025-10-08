@@ -12,6 +12,11 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
+dependencies = [
+  "pyclack-cli[prompts]==0.4.0",
+  "asyncclick==8.3.0.5",
+  "anyio==4.11.0"
+]
 
 [build-system]
 requires = ["setuptools>=61.0"]
@@ -25,6 +30,9 @@ build-backend = "setuptools.build_meta"
 "Bug Tracker" = "https://github.com/serv-c/servc-python/issues"
 Repository = "https://github.com/serv-c/servc-python.git"
 Documentation = "https://docs.servc.io/"
+
+[project.scripts]
+servc = "servc.cli:cli"
 
 [tool.semantic_release]
 assets = []

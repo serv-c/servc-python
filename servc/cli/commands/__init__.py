@@ -1,0 +1,1 @@
+from servc.cli.commands.init import cli as init
