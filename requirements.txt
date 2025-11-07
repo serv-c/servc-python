@@ -6,4 +6,4 @@ flask==3.1.2
 pyyaml==6.0.3
 pyiceberg[sql-sqlite,pyarrow]==0.10.0
 deltalake==0.25.5
-azure-servicebus==7.14.2
+azure-servicebus==7.14.3
